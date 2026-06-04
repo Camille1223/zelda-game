@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>塞尔达传说 — 勇者三试炼</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+    <div id="overlay" class="hidden">
+      <div id="overlay-content"></div>
+    </div>
+  </div>
+
+  <script>
+    // 部署后将下面的地址改为你的 Railway 后端 URL
+    // window.GAME_API_BASE = 'https://your-app.up.railway.app';
+  </script>
+  <script src="assets.js"></script>
+  <script src="ui.js"></script>
+  <script src="level1.js"></script>
+  <script src="level2.js"></script>
+  <script src="level3.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
