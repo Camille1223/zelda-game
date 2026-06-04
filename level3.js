@@ -1,5 +1,5 @@
 // ============================================================
-// level3.js — 关卡3: 魔塔圣地（RPG 策略）
+// level3.js — 关卡3: 魔塔圣殿（卡通2D RPG）
 // ============================================================
 
 const Level3 = (() => {
@@ -7,14 +7,12 @@ const Level3 = (() => {
   const COLS = 9, ROWS = 11;
   const TW = 56, TH = 42;
   const MAP_OFFX = Math.floor((W - COLS*TW) / 2);
-  const MAP_OFFY = 30;
+  const MAP_OFFY = 36;
 
-  // 格子类型
-  const T = { EMPTY:0, WALL:1, ENEMY:2, BOSS:3, CHEST:4, KEY:5, DOOR:6, STAIR:7, PLAYER:8 };
+  const T = {EMPTY:0,WALL:1,ENEMY:2,BOSS:3,CHEST:4,KEY:5,DOOR:6,STAIR:7};
 
-  // 三层地图
   const FLOORS = [
-    // 第1层
+    // 第1层（简单热身）
     [
       [1,1,1,1,1,1,1,1,1],
       [1,0,2,0,0,0,2,0,1],
@@ -28,7 +26,7 @@ const Level3 = (() => {
       [1,0,0,0,7,0,0,0,1],
       [1,1,1,1,1,1,1,1,1],
     ],
-    // 第2层
+    // 第2层（中等）
     [
       [1,1,1,1,1,1,1,1,1],
       [1,0,2,0,2,0,2,0,1],
@@ -42,7 +40,7 @@ const Level3 = (() => {
       [1,0,0,0,7,0,0,0,1],
       [1,1,1,1,1,1,1,1,1],
     ],
-    // 第3层（有BOSS）
+    // 第3层（有BOSS，但可通关）
     [
       [1,1,1,1,1,1,1,1,1],
       [1,0,2,0,3,0,2,0,1],
@@ -58,360 +56,264 @@ const Level3 = (() => {
     ],
   ];
 
-  // 敌人属性（按楼层）
   const ENEMY_STATS = [
-    [{name:'骷髅兵',   hp:20, atk:8,  def:2, exp:30, color:'#aaa'}],
-    [{name:'暗影卫兵', hp:35, atk:14, def:5, exp:60, color:'#7755aa'}],
-    [{name:'魔法师',   hp:25, atk:18, def:3, exp:80, color:'#5599ff'},
-     {name:'BOSS·魔王',hp:120,atk:22, def:8, exp:300,color:'#ff3333'}],
+    [{name:'🐷 小猪兵', hp:18, atk:7,  def:2, exp:30, color:'#fca5a5'}],
+    [{name:'🐸 毒蛙卫', hp:30, atk:12, def:4, exp:60, color:'#86efac'}],
+    [{name:'🐲 火龙将', hp:40, atk:16, def:6, exp:90, color:'#fbbf24'},
+     {name:'👑 魔王',   hp:80, atk:20, def:8, exp:280,color:'#f87171'}],
   ];
 
   const CHEST_REWARDS = [
-    {hp:30, atk:3,  def:2,  text:'+30HP  +3ATK  +2DEF'},
-    {hp:20, atk:5,  def:3,  text:'+20HP  +5ATK  +3DEF'},
-    {hp:50, atk:8,  def:5,  text:'+50HP  +8ATK  +5DEF'},
+    {hp:35, atk:4,  def:2,  text:'💊 +35HP  ⚔️+4ATK  🛡️+2DEF'},
+    {hp:30, atk:6,  def:3,  text:'💊 +30HP  ⚔️+6ATK  🛡️+3DEF'},
+    {hp:60, atk:10, def:6,  text:'💊 +60HP  ⚔️+10ATK 🛡️+6DEF'},
   ];
 
   let floor, map, player, entities, keys, score;
-  let message, msgTimer, battleAnim, frame, cleared;
+  let message, msgTimer, frame, cleared, battleFlash;
 
   function init() {
-    floor = 0;
-    score = 0;
-    frame = 0;
-    message = '';
-    msgTimer = 0;
-    battleAnim = null;
-    cleared = false;
-    keys = {};
-    player = { col:4, row:9, hp:100, maxHp:100, atk:15, def:5, keys:0 };
+    floor=0; score=0; frame=0;
+    message=''; msgTimer=0; cleared=false; battleFlash=0;
+    keys={};
+    player={col:4,row:8,hp:120,maxHp:120,atk:18,def:6,keys:0};
     loadFloor(0);
-    return { type:'level3', done:false };
+    return {type:'level3',done:false};
   }
 
   function loadFloor(f) {
-    floor = f;
-    map = FLOORS[f].map(row => [...row]);
-    entities = {};
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        const t = map[r][c];
-        if (t === T.ENEMY) {
-          const stats = ENEMY_STATS[f][0];
-          entities[`${r}_${c}`] = { type:'enemy', ...stats, col:c, row:r };
-        } else if (t === T.BOSS) {
-          const stats = ENEMY_STATS[f].find(e => e.name.startsWith('BOSS')) || ENEMY_STATS[f][0];
-          entities[`${r}_${c}`] = { type:'boss', ...stats, col:c, row:r };
-        } else if (t === T.CHEST) {
-          entities[`${r}_${c}`] = { type:'chest', ...CHEST_REWARDS[f], col:c, row:r };
-        } else if (t === T.KEY) {
-          entities[`${r}_${c}`] = { type:'key', col:c, row:r };
-        }
+    floor=f;
+    map=FLOORS[f].map(r=>[...r]);
+    entities={};
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+      const t=map[r][c];
+      if(t===T.ENEMY){
+        const s=ENEMY_STATS[f][0];
+        entities[`${r}_${c}`]={type:'enemy',...s,col:c,row:r,maxHp:s.hp};
+      } else if(t===T.BOSS){
+        const s=ENEMY_STATS[f].find(e=>e.name.includes('魔王'))||ENEMY_STATS[f][ENEMY_STATS[f].length-1];
+        entities[`${r}_${c}`]={type:'boss',...s,col:c,row:r,maxHp:s.hp};
+      } else if(t===T.CHEST){
+        entities[`${r}_${c}`]={type:'chest',...CHEST_REWARDS[f],col:c,row:r};
+      } else if(t===T.KEY){
+        entities[`${r}_${c}`]={type:'key',col:c,row:r};
       }
     }
-    // 玩家出生在楼梯位置正上方的通道
-    player.col = 4; player.row = 9;
-    // 往上走到第一个空格
-    for (let r = ROWS-2; r >= 1; r--) {
-      if (map[r][4] === T.STAIR) { player.row = r - 1; break; }
-    }
+    player.col=4; player.row=8;
   }
 
-  function showMsg(text, duration = 120) {
-    message = text;
-    msgTimer = duration;
+  function showMsg(text,dur=100){ message=text; msgTimer=dur; }
+
+  function battle(enemy){
+    let eHp=enemy.hp;
+    const pAtk=Math.max(1,player.atk-enemy.def);
+    const eAtk=Math.max(1,enemy.atk-player.def);
+    let rounds=0;
+    while(eHp>0&&player.hp>0&&rounds<30){ eHp-=pAtk; if(eHp>0) player.hp-=eAtk; rounds++; }
+    return eHp<=0;
   }
 
-  function battle(enemy) {
-    let rounds = 0, log = '';
-    let eHp = enemy.hp;
-    const playerAtk = Math.max(1, player.atk - enemy.def);
-    const enemyAtk = Math.max(1, enemy.atk - player.def);
-    while (eHp > 0 && player.hp > 0 && rounds < 20) {
-      eHp -= playerAtk;
-      if (eHp > 0) player.hp -= enemyAtk;
-      rounds++;
-    }
-    if (eHp <= 0) {
-      score += enemy.exp;
-      const expText = `击败${enemy.name}！+${enemy.exp}分`;
-      showMsg(expText);
-      Assets.playBeep(440, 0.12);
-      return true;
-    }
-    return false;
-  }
-
-  function tryMove(dc, dr) {
-    if (battleAnim) return;
-    const nc = player.col + dc, nr = player.row + dr;
-    if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) return;
-    const cell = map[nr][nc];
-    const key = `${nr}_${nc}`;
-
-    if (cell === T.WALL) return;
-    if (cell === T.DOOR) {
-      if (player.keys > 0) {
-        player.keys--;
-        map[nr][nc] = T.EMPTY;
-        showMsg('开门！');
-        Assets.playBeep(550, 0.1);
-      } else {
-        showMsg('需要钥匙！');
-        Assets.playBeep(200, 0.1);
-        return;
-      }
-    } else if (cell === T.ENEMY || cell === T.BOSS) {
-      const e = entities[key];
-      if (e) {
-        battleAnim = {e, frames:30};
-        const won = battle(e);
-        if (won) {
-          delete entities[key];
-          map[nr][nc] = T.EMPTY;
-          player.col = nc; player.row = nr;
-        } else {
-          showMsg('力量不足，被击败...');
-          Assets.playBeep(200, 0.4, 'sawtooth');
-        }
+  function tryMove(dc,dr){
+    if(msgTimer>30) return;
+    const nc=player.col+dc, nr=player.row+dr;
+    if(nr<0||nr>=ROWS||nc<0||nc>=COLS) return;
+    const cell=map[nr][nc];
+    const key=`${nr}_${nc}`;
+    if(cell===T.WALL) return;
+    if(cell===T.DOOR){
+      if(player.keys>0){ player.keys--; map[nr][nc]=T.EMPTY; showMsg('🔓 开门！',60); Assets.playBeep(600,0.1); }
+      else{ showMsg('🔑 需要钥匙！',80); Assets.playBeep(200,0.1); return; }
+    } else if(cell===T.ENEMY||cell===T.BOSS){
+      const e=entities[key];
+      if(e){
+        battleFlash=20;
+        const won=battle(e);
+        if(won){ score+=e.exp; delete entities[key]; map[nr][nc]=T.EMPTY; showMsg(`✨ 击败${e.name}！+${e.exp}分`,90); Assets.playBeep(500,0.15); }
+        else{ showMsg('💀 被击败了...'); Assets.playBeep(200,0.5,'sawtooth'); }
       }
       return;
-    } else if (cell === T.CHEST) {
-      const c = entities[key];
-      if (c) {
-        player.hp = Math.min(player.maxHp + c.hp, player.maxHp + c.hp);
-        player.maxHp += c.hp;
-        player.hp = player.maxHp;
-        player.atk += c.atk;
-        player.def += c.def;
-        showMsg(c.text);
-        delete entities[key];
-        map[nr][nc] = T.EMPTY;
-        Assets.playBeep(660, 0.15);
-      }
-    } else if (cell === T.KEY) {
-      player.keys++;
-      delete entities[key];
-      map[nr][nc] = T.EMPTY;
-      showMsg('获得钥匙！');
-      Assets.playBeep(770, 0.1);
-    } else if (cell === T.STAIR) {
-      if (floor < 2) {
-        loadFloor(floor + 1);
-        showMsg(`进入第 ${floor+1} 层！`);
-        Assets.playBeep(880, 0.2);
-        return;
-      } else {
-        // 通关！
-        score += 500 + player.hp * 5;
-        cleared = true;
-        Assets.playBeep(880, 0.4);
-        showMsg('魔王已败！通关！');
-        return;
-      }
+    } else if(cell===T.CHEST){
+      const c=entities[key];
+      if(c){ player.maxHp+=c.hp; player.hp=Math.min(player.hp+c.hp,player.maxHp); player.atk+=c.atk; player.def+=c.def; showMsg(c.text,100); delete entities[key]; map[nr][nc]=T.EMPTY; Assets.playBeep(700,0.15); }
+    } else if(cell===T.KEY){
+      player.keys++; delete entities[key]; map[nr][nc]=T.EMPTY; showMsg('🔑 获得钥匙！',60); Assets.playBeep(800,0.1);
+    } else if(cell===T.STAIR){
+      if(floor<2){ loadFloor(floor+1); showMsg(`🌟 进入第${floor+1}层！`,80); Assets.playBeep(900,0.2); return; }
+      else{ score+=500+player.hp*5; cleared=true; showMsg('🎉 魔王已败！恭喜通关！',150); Assets.playBeep(1000,0.4); return; }
     }
-
-    player.col = nc;
-    player.row = nr;
+    player.col=nc; player.row=nr;
   }
 
-  function onKeyDown(e) {
-    if (keys[e.code]) return;
-    keys[e.code] = true;
-    if (msgTimer > 0) { msgTimer = 0; return; }
-    switch(e.code) {
-      case 'ArrowUp':    case 'KeyW': tryMove(0, -1); break;
-      case 'ArrowDown':  case 'KeyS': tryMove(0,  1); break;
-      case 'ArrowLeft':  case 'KeyA': tryMove(-1, 0); break;
-      case 'ArrowRight': case 'KeyD': tryMove(1,  0); break;
+  function onKeyDown(e){
+    if(keys[e.code]) return;
+    keys[e.code]=true;
+    if(msgTimer>30){ msgTimer=Math.min(msgTimer,20); return; }
+    switch(e.code){
+      case'ArrowUp':  case'KeyW': tryMove(0,-1); break;
+      case'ArrowDown':case'KeyS': tryMove(0,1);  break;
+      case'ArrowLeft':case'KeyA': tryMove(-1,0); break;
+      case'ArrowRight':case'KeyD':tryMove(1,0);  break;
     }
   }
-  function onKeyUp(e) { keys[e.code] = false; }
+  function onKeyUp(e){ keys[e.code]=false; }
 
-  function update() {
+  function update(){
     frame++;
-    if (msgTimer > 0) msgTimer--;
-    if (battleAnim) {
-      battleAnim.frames--;
-      if (battleAnim.frames <= 0) battleAnim = null;
-    }
-    if (player.hp <= 0) return { type:'level3', done:true, score, failed:true };
-    if (cleared && msgTimer <= 0) return { type:'level3', done:true, score };
+    if(msgTimer>0) msgTimer--;
+    if(battleFlash>0) battleFlash--;
+    if(player.hp<=0) return{type:'level3',done:true,score,failed:true};
+    if(cleared&&msgTimer<=0) return{type:'level3',done:true,score};
     return null;
   }
 
-  function cellColor(t) {
-    switch(t) {
-      case T.WALL:  return '#1a1a3a';
-      case T.EMPTY: return '#0d0d20';
-      default:      return '#0d0d20';
+  // ---- 绘图 ----
+  function roundRect(ctx,x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+    ctx.closePath();
+  }
+
+  function drawTile(ctx,x,y,cell,entity){
+    if(cell===T.WALL){
+      const g=ctx.createLinearGradient(x,y,x,y+TH);
+      g.addColorStop(0,'#818cf8'); g.addColorStop(1,'#4f46e5');
+      ctx.fillStyle=g; roundRect(ctx,x+1,y+1,TW-2,TH-2,8); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.2)'; roundRect(ctx,x+4,y+4,TW-8,TH*0.3,5); ctx.fill();
+      return;
+    }
+    // 通道
+    ctx.fillStyle='rgba(255,255,255,0.35)';
+    roundRect(ctx,x+1,y+1,TW-2,TH-2,6); ctx.fill();
+
+    if(cell===T.DOOR){
+      // 门
+      const dg=ctx.createLinearGradient(x,y,x,y+TH);
+      dg.addColorStop(0,'#fbbf24'); dg.addColorStop(1,'#d97706');
+      ctx.fillStyle=dg; roundRect(ctx,x+6,y+3,TW-12,TH-3,6); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.3)'; roundRect(ctx,x+9,y+6,TW-18,TH*0.3,4); ctx.fill();
+      ctx.fillStyle='#92400e'; ctx.font='16px Arial'; ctx.textAlign='center';
+      ctx.fillText('🔒',x+TW/2,y+TH/2+6);
+    } else if(cell===T.STAIR){
+      ctx.fillStyle='#6ee7b7';
+      for(let i=0;i<3;i++) ctx.fillRect(x+6+i*10,y+TH-10-i*9,TW-12-i*20,9);
+      ctx.font='14px Arial'; ctx.textAlign='center';
+      ctx.fillText(floor<2?'⬆️':'🏆',x+TW/2,y+TH/2+5);
+    }
+
+    if(!entity) return;
+    if(entity.type==='enemy'||entity.type==='boss'){
+      const flash=battleFlash>0&&Math.floor(battleFlash/4)%2===0;
+      ctx.save();
+      if(flash){ ctx.fillStyle='rgba(255,200,0,0.4)'; roundRect(ctx,x,y,TW,TH,6); ctx.fill(); }
+      ctx.font=entity.type==='boss'?'26px Arial':'20px Arial';
+      ctx.textAlign='center';
+      const bob=Math.sin(frame*0.1+entity.col)*2;
+      ctx.fillText(entity.name.split(' ')[0],x+TW/2,y+TH*0.68+bob);
+      // 血条
+      ctx.fillStyle='rgba(0,0,0,0.25)'; roundRect(ctx,x+4,y+3,TW-8,6,3); ctx.fill();
+      ctx.fillStyle=entity.type==='boss'?'#ef4444':'#4ade80';
+      const hw=(TW-8)*(entity.hp/entity.maxHp);
+      roundRect(ctx,x+4,y+3,hw,6,3); ctx.fill();
+      if(entity.type==='boss'){
+        ctx.fillStyle='#fef08a'; ctx.font='bold 9px Arial'; ctx.textAlign='center';
+        ctx.fillText('BOSS',x+TW/2,y+TH-4);
+      }
+      ctx.restore();
+    } else if(entity.type==='chest'){
+      ctx.font='22px Arial'; ctx.textAlign='center';
+      ctx.fillText('📦',x+TW/2,y+TH*0.7);
+    } else if(entity.type==='key'){
+      const pulse=1+Math.sin(frame*0.15)*0.1;
+      ctx.save(); ctx.translate(x+TW/2,y+TH/2); ctx.scale(pulse,pulse);
+      ctx.font='20px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('🗝️',0,0);
+      ctx.restore();
     }
   }
 
-  function draw(ctx) {
+  function drawPlayer(ctx){
+    const x=MAP_OFFX+player.col*TW, y=MAP_OFFY+player.row*TH;
+    ctx.save();
+    ctx.shadowColor='#fde68a'; ctx.shadowBlur=12;
+    const bob=Math.sin(frame*0.12)*1.5;
+    ctx.font='26px Arial'; ctx.textAlign='center';
+    ctx.fillText('🧝',x+TW/2,y+TH*0.72+bob);
+    ctx.restore();
+  }
+
+  function draw(ctx){
     ctx.clearRect(0,0,W,H);
     // 背景
-    const bg = ctx.createLinearGradient(0,0,0,H);
-    bg.addColorStop(0,'#0a0a1a');
-    bg.addColorStop(1,'#1a0a2a');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0,0,W,H);
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#1e1b4b'); bg.addColorStop(1,'#312e81');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+    // 星星背景
+    ctx.save(); ctx.globalAlpha=0.4;
+    for(let i=0;i<40;i++){
+      const sx=(i*137+50)%W, sy=(i*97+30)%H;
+      const sa=0.3+Math.sin(frame*0.04+i)*0.3;
+      ctx.fillStyle=`rgba(255,255,200,${sa})`;
+      ctx.beginPath(); ctx.arc(sx,sy,1.2,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
 
     // 地图
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        const x = MAP_OFFX + c*TW, y = MAP_OFFY + r*TH;
-        const cell = map[r][c];
-
-        ctx.fillStyle = cellColor(cell);
-        ctx.fillRect(x,y,TW,TH);
-
-        if (cell === T.WALL) {
-          ctx.strokeStyle = '#2a2a5a';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(x+1,y+1,TW-2,TH-2);
-          ctx.fillStyle = '#222244';
-          ctx.fillRect(x+2,y+2,TW-4,6);
-        } else {
-          ctx.strokeStyle = '#111128';
-          ctx.lineWidth = 0.5;
-          ctx.strokeRect(x,y,TW,TH);
-        }
-
-        const key = `${r}_${c}`;
-        const entity = entities[key];
-
-        if (cell === T.DOOR) {
-          ctx.fillStyle = '#8B4513';
-          ctx.fillRect(x+8,y+4,TW-16,TH-4);
-          ctx.fillStyle = '#ffd700';
-          ctx.beginPath();
-          ctx.arc(x+TW/2, y+TH/2, 4, 0, Math.PI*2);
-          ctx.fill();
-        } else if (cell === T.STAIR) {
-          ctx.fillStyle = '#4a3a2a';
-          for (let i = 0; i < 4; i++) {
-            ctx.fillRect(x+i*10+4, y+TH-8-i*7, TW-i*20-8, 8);
-          }
-          ctx.fillStyle = '#ffd700';
-          ctx.font = '10px Courier New';
-          ctx.textAlign = 'center';
-          ctx.fillText(floor < 2 ? '↑上层' : '↑通关', x+TW/2, y+TH/2-4);
-        } else if (entity) {
-          if (entity.type === 'enemy' || entity.type === 'boss') {
-            const pulse = battleAnim && battleAnim.e === entity ? Math.sin(frame*0.5)*4 : 0;
-            Assets.drawSkeleton(ctx, x+6+pulse, y+3, TW-12, TH-6, frame);
-            if (entity.type === 'boss') {
-              ctx.fillStyle = '#ff3333';
-              ctx.globalAlpha = 0.3 + Math.sin(frame*0.1)*0.2;
-              ctx.beginPath();
-              ctx.arc(x+TW/2, y+TH/2, TW*0.45, 0, Math.PI*2);
-              ctx.fill();
-              ctx.globalAlpha = 1;
-              ctx.fillStyle = '#ff3333';
-              ctx.font = 'bold 9px Courier New';
-              ctx.textAlign = 'center';
-              ctx.fillText('BOSS', x+TW/2, y+TH-3);
-            }
-            // 血条
-            ctx.fillStyle = '#300';
-            ctx.fillRect(x+4, y+2, TW-8, 4);
-            ctx.fillStyle = '#e83030';
-            ctx.fillRect(x+4, y+2, (TW-8)*(entity.hp/ENEMY_STATS[floor][entity.type==='boss'?ENEMY_STATS[floor].length-1:0].hp), 4);
-          } else if (entity.type === 'chest') {
-            Assets.drawChest(ctx, x+8, y+6, TW-16, TH-12);
-          } else if (entity.type === 'key') {
-            Assets.drawKey(ctx, x+TW/2-8, y+TH/2-8, 16);
-          }
-        }
-      }
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+      const x=MAP_OFFX+c*TW, y=MAP_OFFY+r*TH;
+      drawTile(ctx,x,y,map[r][c],entities[`${r}_${c}`]);
     }
+    drawPlayer(ctx);
 
-    // 玩家
-    const px = MAP_OFFX + player.col*TW;
-    const py = MAP_OFFY + player.row*TH;
-    Assets.drawHero(ctx, px+TW*0.1, py+TH*0.05, TW*0.8, TH*0.9, 1, Math.floor(frame/10)%2);
+    // 左侧状态栏
+    const sx=8;
+    ctx.fillStyle='rgba(255,255,255,0.1)';
+    roundRect(ctx,sx,MAP_OFFY,130,240,10); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1;
+    roundRect(ctx,sx,MAP_OFFY,130,240,10); ctx.stroke();
 
-    // 侧边状态栏
-    const sx = 10;
-    ctx.fillStyle = 'rgba(0,0,0,0.75)';
-    ctx.fillRect(sx, H/2-120, 130, 240);
-    ctx.strokeStyle = '#4a3a8a';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(sx, H/2-120, 130, 240);
+    ctx.fillStyle='#fde68a'; ctx.font='bold 13px Arial'; ctx.textAlign='left';
+    ctx.fillText('🧝 勇者',sx+8,MAP_OFFY+20);
+    ctx.fillStyle='#fca5a5'; ctx.font='12px Arial';
+    ctx.fillText(`❤️ ${player.hp}/${player.maxHp}`,sx+8,MAP_OFFY+40);
+    ctx.fillStyle='rgba(50,0,0,0.4)'; roundRect(ctx,sx+8,MAP_OFFY+44,112,7,4); ctx.fill();
+    ctx.fillStyle='#ef4444'; roundRect(ctx,sx+8,MAP_OFFY+44,112*(player.hp/player.maxHp),7,4); ctx.fill();
+    ctx.fillStyle='#fbbf24'; ctx.fillText(`⚔️ ATK: ${player.atk}`,sx+8,MAP_OFFY+68);
+    ctx.fillStyle='#86efac'; ctx.fillText(`🛡️ DEF: ${player.def}`,sx+8,MAP_OFFY+86);
+    ctx.fillStyle='#fde68a'; ctx.fillText(`🗝️ 钥匙: ${player.keys}`,sx+8,MAP_OFFY+104);
+    ctx.fillStyle='#c4b5fd'; ctx.fillText(`⭐ 分数: ${score}`,sx+8,MAP_OFFY+122);
+    ctx.fillStyle='#e0e7ff'; ctx.fillText(`📍 第${floor+1}层`,sx+8,MAP_OFFY+140);
 
-    ctx.fillStyle = '#ffd700';
-    ctx.font = 'bold 13px Courier New';
-    ctx.textAlign = 'left';
-    ctx.fillText('勇者状态', sx+8, H/2-100);
-
-    ctx.fillStyle = '#e83030';
-    ctx.font = '12px Courier New';
-    ctx.fillText(`HP: ${player.hp}/${player.maxHp}`, sx+8, H/2-78);
-    // HP条
-    ctx.fillStyle = '#300';
-    ctx.fillRect(sx+8, H/2-70, 110, 8);
-    ctx.fillStyle = '#e83030';
-    ctx.fillRect(sx+8, H/2-70, 110*(player.hp/player.maxHp), 8);
-
-    ctx.fillStyle = '#88ccff';
-    ctx.fillText(`ATK: ${player.atk}`, sx+8, H/2-52);
-    ctx.fillStyle = '#88ff88';
-    ctx.fillText(`DEF: ${player.def}`, sx+8, H/2-34);
-    ctx.fillStyle = '#ffd700';
-    ctx.fillText(`钥匙: ${player.keys}`, sx+8, H/2-16);
-
-    ctx.fillStyle = '#4adf3f';
-    ctx.fillText(`分数: ${score}`, sx+8, H/2+4);
-    ctx.fillStyle = '#aaa';
-    ctx.fillText(`第${floor+1}层`, sx+8, H/2+22);
-
-    // 右侧敌人预览（当前层）
-    const rx = W - 140;
-    ctx.fillStyle = 'rgba(0,0,0,0.75)';
-    ctx.fillRect(rx, H/2-80, 130, 160);
-    ctx.strokeStyle = '#4a3a8a';
-    ctx.strokeRect(rx, H/2-80, 130, 160);
-    ctx.fillStyle = '#ffd700';
-    ctx.font = 'bold 12px Courier New';
-    ctx.textAlign = 'left';
-    ctx.fillText('本层敌人', rx+8, H/2-60);
-    ENEMY_STATS[floor].forEach((e, i) => {
-      ctx.fillStyle = e.color;
-      ctx.fillText(e.name, rx+8, H/2-40+i*36);
-      ctx.fillStyle = '#e83030';
-      ctx.fillText(`HP:${e.hp} ATK:${e.atk}`, rx+8, H/2-26+i*36);
-      ctx.fillStyle = '#88ccff';
-      ctx.fillText(`DEF:${e.def} +${e.exp}分`, rx+8, H/2-12+i*36);
+    // 当前层敌人信息
+    ctx.fillStyle='#a5b4fc'; ctx.font='bold 11px Arial';
+    ctx.fillText('── 本层敌人 ──',sx+8,MAP_OFFY+162);
+    ENEMY_STATS[floor].forEach((e,i)=>{
+      ctx.fillStyle=e.color; ctx.font='11px Arial';
+      ctx.fillText(e.name,sx+8,MAP_OFFY+178+i*32);
+      ctx.fillStyle='#fca5a5'; ctx.fillText(`HP:${e.hp} ATK:${e.atk}`,sx+8,MAP_OFFY+191+i*32);
     });
 
     // 消息框
-    if (msgTimer > 0) {
-      const alpha = Math.min(1, msgTimer/20);
-      ctx.fillStyle = `rgba(0,0,0,${alpha*0.85})`;
-      ctx.fillRect(W/2-180, H/2-25, 360, 50);
-      ctx.strokeStyle = `rgba(255,215,0,${alpha})`;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(W/2-180, H/2-25, 360, 50);
-      ctx.fillStyle = `rgba(255,215,0,${alpha})`;
-      ctx.font = 'bold 16px Courier New';
-      ctx.textAlign = 'center';
-      ctx.fillText(message, W/2, H/2+6);
+    if(msgTimer>0){
+      const alpha=Math.min(1,msgTimer/15);
+      ctx.fillStyle=`rgba(0,0,0,${alpha*0.8})`;
+      roundRect(ctx,W/2-200,H/2-30,400,60,12); ctx.fill();
+      ctx.strokeStyle=`rgba(253,230,138,${alpha})`; ctx.lineWidth=2;
+      roundRect(ctx,W/2-200,H/2-30,400,60,12); ctx.stroke();
+      ctx.fillStyle=`rgba(255,255,255,${alpha})`;
+      ctx.font='bold 15px Arial'; ctx.textAlign='center';
+      ctx.fillText(message,W/2,H/2+6);
     }
 
-    // 操作提示
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillRect(W/2-200, H-24, 400, 20);
-    ctx.fillStyle = '#888';
-    ctx.font = '11px Courier New';
-    ctx.textAlign = 'center';
-    ctx.fillText('WASD/方向键 移动 | 踩敌人战斗 | 找钥匙开门 | 上楼梯↑', W/2, H-10);
-
-    ctx.fillStyle = '#ffd700';
-    ctx.font = '13px Courier New';
-    ctx.textAlign = 'center';
-    ctx.fillText('第3关 — 魔塔圣地', W/2, 20);
+    // HUD顶部
+    ctx.fillStyle='rgba(30,27,75,0.85)'; ctx.fillRect(0,0,W,MAP_OFFY);
+    ctx.fillStyle='#fde68a'; ctx.font='bold 14px Arial'; ctx.textAlign='center';
+    ctx.fillText('第3关 — 魔塔圣殿',W/2,MAP_OFFY-10);
+    ctx.fillStyle='#a5b4fc'; ctx.textAlign='right';
+    ctx.fillText('踩敌战斗 | 宝箱强化 | 找钥开门 | 踩楼梯上层',W-8,MAP_OFFY-10);
   }
 
-  return { init, update, draw, onKeyDown, onKeyUp };
+  return {init,update,draw,onKeyDown,onKeyUp};
 })();
