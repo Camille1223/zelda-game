@@ -25,6 +25,7 @@ window.Game = (() => {
   let scores = { level1: 0, level2: 0, level3: 0 };
   let currentLevel = null;
   let lastLevelScore = 0;
+  let currentLevelNum = 1; // 记录当前关卡，失败时重启同关
 
   function totalScore() {
     return scores.level1 + scores.level2 + scores.level3;
@@ -50,14 +51,17 @@ window.Game = (() => {
 
   function onTitleKey(e) {
     document.removeEventListener('keydown', onTitleKey);
+    currentLevelNum = 1;
     startLevel(Level1, STATE.LEVEL1);
   }
 
   function onClearKey(e) {
     document.removeEventListener('keydown', onClearKey);
     if (state === STATE.LEVEL1_CLEAR) {
+      currentLevelNum = 2;
       startLevel(Level2, STATE.LEVEL2);
     } else if (state === STATE.LEVEL2_CLEAR) {
+      currentLevelNum = 3;
       startLevel(Level3, STATE.LEVEL3);
     } else if (state === STATE.LEVEL3_CLEAR) {
       showFinal();
@@ -66,7 +70,21 @@ window.Game = (() => {
 
   function onGameOverKey(e) {
     document.removeEventListener('keydown', onGameOverKey);
-    restart();
+    restartCurrentLevel();
+  }
+
+  function restartCurrentLevel() {
+    // 重置当前关卡分数，重新开始同一关
+    if (currentLevelNum === 1) {
+      scores.level1 = 0;
+      startLevel(Level1, STATE.LEVEL1);
+    } else if (currentLevelNum === 2) {
+      scores.level2 = 0;
+      startLevel(Level2, STATE.LEVEL2);
+    } else {
+      scores.level3 = 0;
+      startLevel(Level3, STATE.LEVEL3);
+    }
   }
 
   function showClear(levelNum) {

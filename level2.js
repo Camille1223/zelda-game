@@ -151,7 +151,8 @@ const Level2 = (() => {
       }
 
       // 移动骷髅（每16帧）
-      if (frame % 2 === 0) {
+      // 每4帧移动一次（原来2帧，速度减半）
+      if (frame % 4 === 0) {
         for (const g of ghosts) {
           const dir = bfsDir(g);
           if (canMove(g.col + dir.dx, g.row + dir.dy)) {

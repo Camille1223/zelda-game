@@ -157,7 +157,7 @@ const UI = (() => {
     if (Math.floor(f/20)%2 === 0) {
       ctx.fillStyle = '#888';
       ctx.font = '14px Courier New';
-      ctx.fillText('按任意键重新开始', W/2, H/2 + 60);
+      ctx.fillText('按任意键重新挑战本关', W/2, H/2 + 60);
     }
   }
 
