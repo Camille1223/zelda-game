@@ -189,7 +189,7 @@ const Level2 = (() => {
     }
 
     // 通关：全部碎片收集
-    if (collectedDots >= totalDots) {
+    if (collectedDots >= Math.ceil(totalDots * 0.6)) {
       Assets.playBeep(880, 0.3);
       return { type:'level2', done:true, score };
     }
@@ -284,7 +284,7 @@ const Level2 = (() => {
     ctx.fillText(`分数: ${score}`, 10, offY - 6);
     ctx.fillStyle = '#4adf3f';
     ctx.textAlign = 'center';
-    ctx.fillText(`心之碎片: ${collectedDots} / ${totalDots}`, W/2, offY - 6);
+    ctx.fillText(`心之碎片: ${collectedDots} / ${Math.ceil(totalDots * 0.6)} (目标)`, W/2, offY - 6);
     ctx.fillStyle = '#ffd700';
     ctx.font = '13px Courier New';
     ctx.textAlign = 'right';
