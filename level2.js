@@ -67,7 +67,12 @@ const Level2 = (() => {
   }
 
   function onKeyDown(e) {
-    if (DIRS[e.code]) { keys[e.code] = true; e.preventDefault(); }
+    if (DIRS[e.code]) {
+      // 立即记录期望方向，不等下一移动帧
+      player.nextDx = DIRS[e.code].dx;
+      player.nextDy = DIRS[e.code].dy;
+      e.preventDefault();
+    }
   }
   function onKeyUp(e) { if (DIRS[e.code]) keys[e.code] = false; }
 
@@ -111,20 +116,15 @@ const Level2 = (() => {
     // 更新骷髅scared状态
     ghosts.forEach(g => g.scared = powered);
 
-    // 玩家输入（存储期望方向）
-    for (const code in DIRS) {
-      if (keys[code]) {
-        player.nextDx = DIRS[code].dx;
-        player.nextDy = DIRS[code].dy;
-      }
-    }
+    // 玩家输入（onKeyDown 已实时更新 nextDx/nextDy，无需再轮询）
 
-    // 每8帧移动一格
+    // 每6帧移动一格（比原来8帧更流畅，拐弯响应更快）
     moveTimer++;
-    if (moveTimer >= 8) {
+    if (moveTimer >= 6) {
       moveTimer = 0;
-      // 尝试期望方向
-      if (canMove(player.col + player.nextDx, player.row + player.nextDy)) {
+      // 优先尝试期望方向（拐弯）
+      if ((player.nextDx !== player.dx || player.nextDy !== player.dy) &&
+          canMove(player.col + player.nextDx, player.row + player.nextDy)) {
         player.dx = player.nextDx;
         player.dy = player.nextDy;
       }
@@ -151,8 +151,8 @@ const Level2 = (() => {
       }
 
       // 移动骷髅（每16帧）
-      // 每4帧移动一次（原来2帧，速度减半）
-      if (frame % 4 === 0) {
+      // 每6格移动一次（速度更慢）
+      if (frame % 6 === 0) {
         for (const g of ghosts) {
           const dir = bfsDir(g);
           if (canMove(g.col + dir.dx, g.row + dir.dy)) {
