@@ -12,6 +12,11 @@ html, body {
   font-family: 'Arial', sans-serif;
 }
 
+/* overlay 打开时恢复触摸和滚动 */
+body.overlay-open {
+  touch-action: auto;
+}
+
 /* ── 游戏容器：铺满整个屏幕 ── */
 #game-container {
   position: fixed;
@@ -36,10 +41,12 @@ html, body {
   background: rgba(0,0,0,0.88);
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
+  padding-top: 40px;
   z-index: 10;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  touch-action: auto;
 }
 #overlay.hidden { display: none; }
 

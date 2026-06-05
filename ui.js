@@ -10,8 +10,12 @@ const UI = (() => {
     const o = document.getElementById('overlay');
     document.getElementById('overlay-content').innerHTML = html;
     o.classList.remove('hidden');
+    document.body.classList.add('overlay-open');
   }
-  function hideOverlay() { document.getElementById('overlay').classList.add('hidden'); }
+  function hideOverlay() {
+    document.getElementById('overlay').classList.add('hidden');
+    document.body.classList.remove('overlay-open');
+  }
 
   function roundRect(ctx,x,y,w,h,r){
     ctx.beginPath();
