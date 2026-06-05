@@ -98,7 +98,47 @@ html, body {
 .rank-2 { color: #c0c0c0 !important; }
 .rank-3 { color: #cd7f32 !important; }
 
-/* ── 第一关触屏按钮 ── */
+/* ── 第二、三关方向键 ── */
+#dpad {
+  position: fixed;
+  bottom: max(18px, env(safe-area-inset-bottom, 18px));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  z-index: 5;
+}
+#dpad.hidden  { display: none; }
+#dpad.visible { display: flex; }
+
+.dpad-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.dpad-mid {
+  width: 58px; height: 58px;
+}
+.dpad-btn {
+  width: 58px; height: 58px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.18);
+  border: 2px solid rgba(255,255,255,0.45);
+  color: #fff; font-size: 20px;
+  display: flex; justify-content: center; align-items: center;
+  cursor: pointer; pointer-events: all;
+  user-select: none; -webkit-user-select: none;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-weight: bold;
+}
+.dpad-btn:active, .dpad-btn.pressed {
+  background: rgba(255,255,255,0.40);
+  transform: scale(0.93);
+}
 #touch-controls {
   position: fixed;
   bottom: max(20px, env(safe-area-inset-bottom, 20px));

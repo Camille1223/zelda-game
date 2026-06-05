@@ -5,8 +5,8 @@
 const Level2 = (() => {
   const W = 400, H = 700;
   const COLS = 11, ROWS = 15;
-  const TW = 32, TH = 32;
-  const offX = Math.floor((W - COLS*TW) / 2);  // 24
+  const TW = 30, TH = 30;
+  const offX = Math.floor((W - COLS*TW) / 2);  // 35
   const offY = 44;  // top HUD height
 
   // 0=通道 1=墙 2=小星 3=大糖果

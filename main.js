@@ -69,6 +69,13 @@ window.Game = (() => {
   const btnRight = document.getElementById('btn-right');
   const btnJump  = document.getElementById('btn-jump');
 
+  // ── 第二、三关方向键 ──
+  const dpad = document.getElementById('dpad');
+  const dpadUp    = document.getElementById('dpad-up');
+  const dpadDown  = document.getElementById('dpad-down');
+  const dpadLeft  = document.getElementById('dpad-left');
+  const dpadRight = document.getElementById('dpad-right');
+
   function bindTouchBtn(btn, code) {
     const down = e => { btn.classList.add('pressed'); if(currentLevel) currentLevel.onKeyDown({code, preventDefault:()=>{}}); if(e) e.preventDefault(); };
     const up   = e => { btn.classList.remove('pressed'); if(currentLevel) currentLevel.onKeyUp({code, preventDefault:()=>{}}); if(e) e.preventDefault(); };
@@ -82,10 +89,18 @@ window.Game = (() => {
   bindTouchBtn(btnLeft,  'ArrowLeft');
   bindTouchBtn(btnRight, 'ArrowRight');
   bindTouchBtn(btnJump,  'Space');
+  bindTouchBtn(dpadUp,    'ArrowUp');
+  bindTouchBtn(dpadDown,  'ArrowDown');
+  bindTouchBtn(dpadLeft,  'ArrowLeft');
+  bindTouchBtn(dpadRight, 'ArrowRight');
 
-  function showTouchControls(show) {
-    touchControls.classList.toggle('hidden',  !show);
-    touchControls.classList.toggle('visible',  show);
+  function showTouchControls(levelKey) {
+    const isL1 = levelKey === STATE.LEVEL1;
+    const isDpad = levelKey === STATE.LEVEL2 || levelKey === STATE.LEVEL3;
+    touchControls.classList.toggle('hidden',  !isL1);
+    touchControls.classList.toggle('visible',  isL1);
+    dpad.classList.toggle('hidden',  !isDpad);
+    dpad.classList.toggle('visible',  isDpad);
   }
 
   // ── 状态机 ──
@@ -102,7 +117,7 @@ window.Game = (() => {
     document.addEventListener('keydown', mod.onKeyDown);
     document.addEventListener('keyup',   mod.onKeyUp);
     UI.hideOverlay();
-    showTouchControls(key === STATE.LEVEL1);
+    showTouchControls(key);
   }
 
   function stopLevel() {
@@ -111,7 +126,7 @@ window.Game = (() => {
       document.removeEventListener('keyup',   currentLevel.onKeyUp);
       currentLevel = null;
     }
-    showTouchControls(false);
+    showTouchControls(null);
   }
 
   function onTitleKey(e) {
