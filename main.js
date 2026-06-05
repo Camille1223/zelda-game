@@ -34,13 +34,14 @@ window.Game = (() => {
   window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 300));
   resizeCanvas();
 
-  // ── 触屏滑动（第2、3关）+ 点击继续 ──
-  let touchStartX = 0, touchStartY = 0;
-  const SWIPE_MIN = 28;
+  // ── 触屏滑动（第3关实时）+ 点击继续 ──
+  let touchStartX = 0, touchStartY = 0, swipeFired = false;
+  const SWIPE_MIN = 12;
 
   document.addEventListener('touchstart', e => {
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
+    swipeFired = false;
     if ([STATE.TITLE, STATE.LEVEL1_CLEAR, STATE.LEVEL2_CLEAR,
          STATE.LEVEL3_CLEAR, STATE.GAMEOVER, STATE.CELEBRATE].includes(state)) {
       document.dispatchEvent(new KeyboardEvent('keydown', {code:'Space', bubbles:true}));
@@ -48,20 +49,39 @@ window.Game = (() => {
     e.preventDefault();
   }, {passive:false});
 
-  document.addEventListener('touchend', e => {
-    const dx = e.changedTouches[0].clientX - touchStartX;
-    const dy = e.changedTouches[0].clientY - touchStartY;
-    if (Math.abs(dx) < SWIPE_MIN && Math.abs(dy) < SWIPE_MIN) return;
-    let code;
-    if (Math.abs(dx) > Math.abs(dy)) code = dx > 0 ? 'ArrowRight' : 'ArrowLeft';
-    else code = dy > 0 ? 'ArrowDown' : 'ArrowUp';
-    if (currentLevel && (state === STATE.LEVEL2 || state === STATE.LEVEL3)) {
-      currentLevel.onKeyDown({code, preventDefault:()=>{}});
+  document.addEventListener('touchmove', e => {
+    // 第三关：touchmove 实时触发，每次滑动只触发一次方向
+    if (state === STATE.LEVEL3 && currentLevel && !swipeFired) {
+      const dx = e.touches[0].clientX - touchStartX;
+      const dy = e.touches[0].clientY - touchStartY;
+      if (Math.abs(dx) >= SWIPE_MIN || Math.abs(dy) >= SWIPE_MIN) {
+        let code;
+        if (Math.abs(dx) > Math.abs(dy)) code = dx > 0 ? 'ArrowRight' : 'ArrowLeft';
+        else code = dy > 0 ? 'ArrowDown' : 'ArrowUp';
+        currentLevel.onKeyDown({code, preventDefault:()=>{}});
+        swipeFired = true;
+        // 重置起点，下一段滑动可再次触发
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }
     }
     e.preventDefault();
   }, {passive:false});
 
-  document.addEventListener('touchmove', e => e.preventDefault(), {passive:false});
+  document.addEventListener('touchend', e => {
+    // 第二关：抬手时判断方向
+    if (state === STATE.LEVEL2 && currentLevel) {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      if (Math.abs(dx) >= SWIPE_MIN || Math.abs(dy) >= SWIPE_MIN) {
+        let code;
+        if (Math.abs(dx) > Math.abs(dy)) code = dx > 0 ? 'ArrowRight' : 'ArrowLeft';
+        else code = dy > 0 ? 'ArrowDown' : 'ArrowUp';
+        currentLevel.onKeyDown({code, preventDefault:()=>{}});
+      }
+    }
+    e.preventDefault();
+  }, {passive:false});
 
   // ── 第一关触屏按钮 ──
   const touchControls = document.getElementById('touch-controls');
@@ -95,8 +115,8 @@ window.Game = (() => {
   bindTouchBtn(dpadRight, 'ArrowRight');
 
   function showTouchControls(levelKey) {
-    const isL1 = levelKey === STATE.LEVEL1;
-    const isDpad = levelKey === STATE.LEVEL2 || levelKey === STATE.LEVEL3;
+    const isL1   = levelKey === STATE.LEVEL1;
+    const isDpad = levelKey === STATE.LEVEL2;   // 第三关用滑动，不显示dpad
     touchControls.classList.toggle('hidden',  !isL1);
     touchControls.classList.toggle('visible',  isL1);
     dpad.classList.toggle('hidden',  !isDpad);
