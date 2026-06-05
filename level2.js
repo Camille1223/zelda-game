@@ -28,13 +28,14 @@ const Level2 = (() => {
     [1,1,1,1,1,1,1,1,1,1,1],
   ];
 
-  let map, player, ghosts, score, frame, powerTimer, moveTimer;
+  let map, player, ghosts, score, frame, powerTimer, moveTimer, safeTimer;
   let totalDots, collectedDots;
 
+  // 鬼魂初始在四角，远离玩家出生点(5,7)
   const GHOST_DEFS = [
     {col:1,  row:1,  dx:1,  dy:0, color:'#fb7185', eyeColor:'#be123c'},
     {col:9,  row:1,  dx:-1, dy:0, color:'#fb923c', eyeColor:'#c2410c'},
-    {col:5,  row:7,  dx:0,  dy:-1,color:'#a78bfa', eyeColor:'#6d28d9'},
+    {col:1,  row:13, dx:1,  dy:0, color:'#a78bfa', eyeColor:'#6d28d9'},
   ];
 
   const DIRS = {
@@ -45,7 +46,7 @@ const Level2 = (() => {
   };
 
   function init() {
-    frame=0; score=0; powerTimer=0; moveTimer=0;
+    frame=0; score=0; powerTimer=0; moveTimer=0; safeTimer=180;
     map = MAP_TEMPLATE.map(r=>[...r]);
     totalDots=0; collectedDots=0;
     for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++)
@@ -70,7 +71,8 @@ const Level2 = (() => {
     if(g.scared){
       valid.sort((a,b)=>(Math.abs(col+b.dx-tc)+Math.abs(row+b.dy-tr))-(Math.abs(col+a.dx-tc)+Math.abs(row+a.dy-tr)));
     } else {
-      if(Math.random()<0.25) return valid[Math.floor(Math.random()*valid.length)];
+      // 70%随机游走，30%追踪，降低难度
+      if(Math.random()<0.7) return valid[Math.floor(Math.random()*valid.length)];
       valid.sort((a,b)=>(Math.abs(col+a.dx-tc)+Math.abs(row+a.dy-tr))-(Math.abs(col+b.dx-tc)+Math.abs(row+b.dy-tr)));
     }
     return valid[0];
@@ -78,6 +80,7 @@ const Level2 = (() => {
 
   function update() {
     frame++;
+    if(safeTimer>0) safeTimer--;
     if(powerTimer>0) powerTimer--;
     ghosts.forEach(g=>g.scared=powerTimer>0);
 
@@ -94,14 +97,17 @@ const Level2 = (() => {
       if(cell===2){ map[player.row][player.col]=0; score+=20; collectedDots++; Assets.playBeep(600+collectedDots*3,0.04); }
       else if(cell===3){ map[player.row][player.col]=0; score+=120; collectedDots++; powerTimer=280; Assets.playBeep(900,0.15); }
 
-      if(frame%8===0){
+      if(frame%10===0){
         for(const g of ghosts){ const d=ghostAI(g); g.dx=d.dx; g.dy=d.dy; g.col+=d.dx; g.row+=d.dy; }
       }
-      for(let i=0;i<ghosts.length;i++){
-        const g=ghosts[i];
-        if(g.col===player.col&&g.row===player.row){
-          if(g.scared){ g.col=GHOST_DEFS[i].col; g.row=GHOST_DEFS[i].row; g.scared=false; score+=150; Assets.playBeep(500,0.1); }
-          else{ Assets.playBeep(180,0.4,'sawtooth'); return{type:'level2',done:true,score,failed:true}; }
+      // 开局无敌期内不判断碰撞
+      if(safeTimer<=0){
+        for(let i=0;i<ghosts.length;i++){
+          const g=ghosts[i];
+          if(g.col===player.col&&g.row===player.row){
+            if(g.scared){ g.col=GHOST_DEFS[i].col; g.row=GHOST_DEFS[i].row; g.scared=false; score+=150; Assets.playBeep(500,0.1); }
+            else{ Assets.playBeep(180,0.4,'sawtooth'); return{type:'level2',done:true,score,failed:true}; }
+          }
         }
       }
     }
@@ -285,6 +291,14 @@ const Level2 = (() => {
     const bw=W-24;
     ctx.fillStyle='#e9d5ff'; roundRect(ctx,12,36,bw,5,3); ctx.fill();
     ctx.fillStyle='#a855f7'; roundRect(ctx,12,36,bw*Math.min(collectedDots/target,1),5,3); ctx.fill();
+
+    // 开局无敌提示
+    if(safeTimer>0){
+      ctx.fillStyle=`rgba(74,222,128,${0.15+Math.sin(frame*0.15)*0.08})`;
+      ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#4ade80'; ctx.font='bold 13px Arial'; ctx.textAlign='center';
+      ctx.fillText(`🛡️ 保护中 ${Math.ceil(safeTimer/60)}s — 快移动！`,W/2,H-12);
+    }
 
     // 强力模式
     if(powerTimer>0){
