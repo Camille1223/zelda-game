@@ -1,168 +1,129 @@
 // ============================================================
-// level3.js — 关卡3: 魔塔圣殿（卡通2D RPG）
+// level3.js — 关卡3: 彩虹贪吃蛇（卡通可爱版）
 // ============================================================
 
 const Level3 = (() => {
   const W = 800, H = 500;
-  const COLS = 9, ROWS = 11;
-  const TW = 56, TH = 42;
-  const MAP_OFFX = Math.floor((W - COLS*TW) / 2);
-  const MAP_OFFY = 36;
+  const COLS = 20, ROWS = 16;
+  const TW = 36, TH = 28;
+  const offX = Math.floor((W - COLS*TW) / 2);
+  const offY = Math.floor((H - ROWS*TH) / 2) + 10;
 
-  const T = {EMPTY:0,WALL:1,ENEMY:2,BOSS:3,CHEST:4,KEY:5,DOOR:6,STAIR:7};
-
-  const FLOORS = [
-    // 第1层（简单热身）
-    [
-      [1,1,1,1,1,1,1,1,1],
-      [1,0,2,0,0,0,2,0,1],
-      [1,0,1,1,0,1,1,0,1],
-      [1,0,4,0,0,0,4,0,1],
-      [1,0,1,0,1,0,1,0,1],
-      [1,0,0,5,0,0,0,0,1],
-      [1,0,1,0,1,0,1,0,1],
-      [1,2,0,0,6,0,0,2,1],
-      [1,0,1,1,0,1,1,0,1],
-      [1,0,0,0,7,0,0,0,1],
-      [1,1,1,1,1,1,1,1,1],
-    ],
-    // 第2层（中等）
-    [
-      [1,1,1,1,1,1,1,1,1],
-      [1,0,2,0,2,0,2,0,1],
-      [1,0,1,1,0,1,1,0,1],
-      [1,4,0,0,0,0,0,4,1],
-      [1,0,1,0,1,0,1,0,1],
-      [1,0,0,5,0,5,0,0,1],
-      [1,0,1,0,1,0,1,0,1],
-      [1,2,0,0,6,0,0,2,1],
-      [1,0,1,1,0,1,1,0,1],
-      [1,0,0,0,7,0,0,0,1],
-      [1,1,1,1,1,1,1,1,1],
-    ],
-    // 第3层（有BOSS，但可通关）
-    [
-      [1,1,1,1,1,1,1,1,1],
-      [1,0,2,0,3,0,2,0,1],
-      [1,0,1,1,0,1,1,0,1],
-      [1,4,0,0,0,0,0,4,1],
-      [1,0,1,0,1,0,1,0,1],
-      [1,0,0,5,0,5,0,0,1],
-      [1,0,1,0,1,0,1,0,1],
-      [1,2,0,6,0,6,0,2,1],
-      [1,0,1,1,0,1,1,0,1],
-      [1,0,0,0,7,0,0,0,1],
-      [1,1,1,1,1,1,1,1,1],
-    ],
+  // 食物种类
+  const FOODS = [
+    {emoji:'🍎', score:10, color:'#ef4444'},
+    {emoji:'🍊', score:15, color:'#f97316'},
+    {emoji:'🍇', score:20, color:'#a855f7'},
+    {emoji:'⭐', score:30, color:'#fbbf24'},
+    {emoji:'💎', score:50, color:'#38bdf8'},
   ];
 
-  const ENEMY_STATS = [
-    [{name:'🐷 小猪兵', hp:18, atk:7,  def:2, exp:30, color:'#fca5a5'}],
-    [{name:'🐸 毒蛙卫', hp:30, atk:12, def:4, exp:60, color:'#86efac'}],
-    [{name:'🐲 火龙将', hp:40, atk:16, def:6, exp:90, color:'#fbbf24'},
-     {name:'👑 魔王',   hp:80, atk:20, def:8, exp:280,color:'#f87171'}],
-  ];
-
-  const CHEST_REWARDS = [
-    {hp:35, atk:4,  def:2,  text:'💊 +35HP  ⚔️+4ATK  🛡️+2DEF'},
-    {hp:30, atk:6,  def:3,  text:'💊 +30HP  ⚔️+6ATK  🛡️+3DEF'},
-    {hp:60, atk:10, def:6,  text:'💊 +60HP  ⚔️+10ATK 🛡️+6DEF'},
-  ];
-
-  let floor, map, player, entities, keys, score;
-  let message, msgTimer, frame, cleared, battleFlash;
+  let snake, dir, nextDir, food, score, frame, moveTimer, alive, cleared;
+  let foodEaten, targetFood, keys, particles;
 
   function init() {
-    floor=0; score=0; frame=0;
-    message=''; msgTimer=0; cleared=false; battleFlash=0;
-    keys={};
-    player={col:4,row:8,hp:120,maxHp:120,atk:18,def:6,keys:0};
-    loadFloor(0);
-    return {type:'level3',done:false};
+    keys = {};
+    frame = 0; score = 0; moveTimer = 0;
+    alive = true; cleared = false; foodEaten = 0; targetFood = 12;
+    particles = [];
+    // 蛇初始：中间，长度3
+    snake = [
+      {col:11, row:8},
+      {col:10, row:8},
+      {col:9,  row:8},
+    ];
+    dir = {dc:1, dr:0};
+    nextDir = {dc:1, dr:0};
+    spawnFood();
+    return {type:'level3', done:false};
   }
 
-  function loadFloor(f) {
-    floor=f;
-    map=FLOORS[f].map(r=>[...r]);
-    entities={};
-    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-      const t=map[r][c];
-      if(t===T.ENEMY){
-        const s=ENEMY_STATS[f][0];
-        entities[`${r}_${c}`]={type:'enemy',...s,col:c,row:r,maxHp:s.hp};
-      } else if(t===T.BOSS){
-        const s=ENEMY_STATS[f].find(e=>e.name.includes('魔王'))||ENEMY_STATS[f][ENEMY_STATS[f].length-1];
-        entities[`${r}_${c}`]={type:'boss',...s,col:c,row:r,maxHp:s.hp};
-      } else if(t===T.CHEST){
-        entities[`${r}_${c}`]={type:'chest',...CHEST_REWARDS[f],col:c,row:r};
-      } else if(t===T.KEY){
-        entities[`${r}_${c}`]={type:'key',col:c,row:r};
-      }
+  function spawnFood() {
+    const type = FOODS[Math.min(Math.floor(foodEaten/3), FOODS.length-1)];
+    let col, row;
+    do {
+      col = 1 + Math.floor(Math.random()*(COLS-2));
+      row = 1 + Math.floor(Math.random()*(ROWS-2));
+    } while (snake.some(s=>s.col===col&&s.row===row));
+    food = {col, row, ...type, pulse:0};
+  }
+
+  function onKeyDown(e) {
+    switch(e.code) {
+      case 'ArrowUp':  case 'KeyW': if(dir.dr!==1)  nextDir={dc:0,dr:-1}; break;
+      case 'ArrowDown':case 'KeyS': if(dir.dr!==-1) nextDir={dc:0,dr:1};  break;
+      case 'ArrowLeft':case 'KeyA': if(dir.dc!==1)  nextDir={dc:-1,dr:0}; break;
+      case 'ArrowRight':case 'KeyD':if(dir.dc!==-1) nextDir={dc:1,dr:0};  break;
     }
-    player.col=4; player.row=8;
+    e.preventDefault();
   }
+  function onKeyUp(e) {}
 
-  function showMsg(text,dur=100){ message=text; msgTimer=dur; }
-
-  function battle(enemy){
-    let eHp=enemy.hp;
-    const pAtk=Math.max(1,player.atk-enemy.def);
-    const eAtk=Math.max(1,enemy.atk-player.def);
-    let rounds=0;
-    while(eHp>0&&player.hp>0&&rounds<30){ eHp-=pAtk; if(eHp>0) player.hp-=eAtk; rounds++; }
-    return eHp<=0;
-  }
-
-  function tryMove(dc,dr){
-    if(msgTimer>30) return;
-    const nc=player.col+dc, nr=player.row+dr;
-    if(nr<0||nr>=ROWS||nc<0||nc>=COLS) return;
-    const cell=map[nr][nc];
-    const key=`${nr}_${nc}`;
-    if(cell===T.WALL) return;
-    if(cell===T.DOOR){
-      if(player.keys>0){ player.keys--; map[nr][nc]=T.EMPTY; showMsg('🔓 开门！',60); Assets.playBeep(600,0.1); }
-      else{ showMsg('🔑 需要钥匙！',80); Assets.playBeep(200,0.1); return; }
-    } else if(cell===T.ENEMY||cell===T.BOSS){
-      const e=entities[key];
-      if(e){
-        battleFlash=20;
-        const won=battle(e);
-        if(won){ score+=e.exp; delete entities[key]; map[nr][nc]=T.EMPTY; showMsg(`✨ 击败${e.name}！+${e.exp}分`,90); Assets.playBeep(500,0.15); }
-        else{ showMsg('💀 被击败了...'); Assets.playBeep(200,0.5,'sawtooth'); }
-      }
-      return;
-    } else if(cell===T.CHEST){
-      const c=entities[key];
-      if(c){ player.maxHp+=c.hp; player.hp=Math.min(player.hp+c.hp,player.maxHp); player.atk+=c.atk; player.def+=c.def; showMsg(c.text,100); delete entities[key]; map[nr][nc]=T.EMPTY; Assets.playBeep(700,0.15); }
-    } else if(cell===T.KEY){
-      player.keys++; delete entities[key]; map[nr][nc]=T.EMPTY; showMsg('🔑 获得钥匙！',60); Assets.playBeep(800,0.1);
-    } else if(cell===T.STAIR){
-      if(floor<2){ loadFloor(floor+1); showMsg(`🌟 进入第${floor+1}层！`,80); Assets.playBeep(900,0.2); return; }
-      else{ score+=500+player.hp*5; cleared=true; showMsg('🎉 魔王已败！恭喜通关！',150); Assets.playBeep(1000,0.4); return; }
-    }
-    player.col=nc; player.row=nr;
-  }
-
-  function onKeyDown(e){
-    if(keys[e.code]) return;
-    keys[e.code]=true;
-    if(msgTimer>30){ msgTimer=Math.min(msgTimer,20); return; }
-    switch(e.code){
-      case'ArrowUp':  case'KeyW': tryMove(0,-1); break;
-      case'ArrowDown':case'KeyS': tryMove(0,1);  break;
-      case'ArrowLeft':case'KeyA': tryMove(-1,0); break;
-      case'ArrowRight':case'KeyD':tryMove(1,0);  break;
+  function addParticles(col, row, color) {
+    for(let i=0;i<10;i++){
+      const angle=Math.random()*Math.PI*2;
+      const speed=1.5+Math.random()*2.5;
+      particles.push({
+        x: offX+col*TW+TW/2, y: offY+row*TH+TH/2,
+        vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed,
+        life: 35+Math.random()*20, maxLife:50,
+        color, size: 3+Math.random()*3,
+      });
     }
   }
-  function onKeyUp(e){ keys[e.code]=false; }
 
-  function update(){
+  function update() {
     frame++;
-    if(msgTimer>0) msgTimer--;
-    if(battleFlash>0) battleFlash--;
-    if(player.hp<=0) return{type:'level3',done:true,score,failed:true};
-    if(cleared&&msgTimer<=0) return{type:'level3',done:true,score};
+    food.pulse = (food.pulse||0)+1;
+
+    // 粒子更新
+    particles = particles.filter(p=>{
+      p.x+=p.vx; p.y+=p.vy; p.vy+=0.08; p.life--;
+      return p.life>0;
+    });
+
+    // 移动速度：每9帧一格（中等难度）
+    moveTimer++;
+    const speed = Math.max(6, 9 - Math.floor(snake.length/5));
+    if(moveTimer < speed) return null;
+    moveTimer = 0;
+
+    dir = nextDir;
+    const head = snake[0];
+    const newHead = {col: head.col+dir.dc, row: head.row+dir.dr};
+
+    // 撞墙
+    if(newHead.col<=0||newHead.col>=COLS-1||newHead.row<=0||newHead.row>=ROWS-1){
+      alive = false;
+      Assets.playBeep(200, 0.4, 'sawtooth');
+      return {type:'level3', done:true, score, failed:true};
+    }
+    // 撞自己
+    if(snake.some(s=>s.col===newHead.col&&s.row===newHead.row)){
+      alive = false;
+      Assets.playBeep(200, 0.4, 'sawtooth');
+      return {type:'level3', done:true, score, failed:true};
+    }
+
+    snake.unshift(newHead);
+
+    // 吃到食物
+    if(newHead.col===food.col&&newHead.row===food.row){
+      score += food.score;
+      foodEaten++;
+      addParticles(food.col, food.row, food.color);
+      Assets.playBeep(600+foodEaten*20, 0.1);
+      spawnFood();
+      // 吃够数量过关
+      if(foodEaten >= targetFood){
+        score += 300 + snake.length*10;
+        cleared = true;
+        Assets.playBeep(900, 0.3);
+        return {type:'level3', done:true, score};
+      }
+    } else {
+      snake.pop();
+    }
     return null;
   }
 
@@ -176,144 +137,164 @@ const Level3 = (() => {
     ctx.closePath();
   }
 
-  function drawTile(ctx,x,y,cell,entity){
-    if(cell===T.WALL){
-      const g=ctx.createLinearGradient(x,y,x,y+TH);
-      g.addColorStop(0,'#818cf8'); g.addColorStop(1,'#4f46e5');
-      ctx.fillStyle=g; roundRect(ctx,x+1,y+1,TW-2,TH-2,8); ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,0.2)'; roundRect(ctx,x+4,y+4,TW-8,TH*0.3,5); ctx.fill();
-      return;
+  function drawGrid(ctx) {
+    // 棋盘格背景
+    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+      const x=offX+c*TW, y=offY+r*TH;
+      const isWall = r===0||r===ROWS-1||c===0||c===COLS-1;
+      if(isWall){
+        const g=ctx.createLinearGradient(x,y,x,y+TH);
+        g.addColorStop(0,'#6d28d9'); g.addColorStop(1,'#4c1d95');
+        ctx.fillStyle=g;
+        roundRect(ctx,x+1,y+1,TW-2,TH-2,5); ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,0.15)';
+        roundRect(ctx,x+3,y+3,TW-6,TH*0.3,3); ctx.fill();
+      } else {
+        ctx.fillStyle=(r+c)%2===0?'rgba(255,255,255,0.06)':'rgba(255,255,255,0.03)';
+        ctx.fillRect(x,y,TW,TH);
+      }
     }
-    // 通道
-    ctx.fillStyle='rgba(255,255,255,0.35)';
-    roundRect(ctx,x+1,y+1,TW-2,TH-2,6); ctx.fill();
+  }
 
-    if(cell===T.DOOR){
-      // 门
-      const dg=ctx.createLinearGradient(x,y,x,y+TH);
-      dg.addColorStop(0,'#fbbf24'); dg.addColorStop(1,'#d97706');
-      ctx.fillStyle=dg; roundRect(ctx,x+6,y+3,TW-12,TH-3,6); ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,0.3)'; roundRect(ctx,x+9,y+6,TW-18,TH*0.3,4); ctx.fill();
-      ctx.fillStyle='#92400e'; ctx.font='16px Arial'; ctx.textAlign='center';
-      ctx.fillText('🔒',x+TW/2,y+TH/2+6);
-    } else if(cell===T.STAIR){
-      ctx.fillStyle='#6ee7b7';
-      for(let i=0;i<3;i++) ctx.fillRect(x+6+i*10,y+TH-10-i*9,TW-12-i*20,9);
-      ctx.font='14px Arial'; ctx.textAlign='center';
-      ctx.fillText(floor<2?'⬆️':'🏆',x+TW/2,y+TH/2+5);
-    }
+  function drawSnake(ctx) {
+    for(let i=snake.length-1;i>=0;i--){
+      const s=snake[i];
+      const x=offX+s.col*TW, y=offY+s.row*TH;
+      const isHead=i===0;
+      const t=i/snake.length;
 
-    if(!entity) return;
-    if(entity.type==='enemy'||entity.type==='boss'){
-      const flash=battleFlash>0&&Math.floor(battleFlash/4)%2===0;
+      // 身体颜色渐变：头绿→尾青
+      const hue = 120 + t*60;
+      const sat = 70-t*20;
+      const lit = isHead?52:45+t*10;
+
       ctx.save();
-      if(flash){ ctx.fillStyle='rgba(255,200,0,0.4)'; roundRect(ctx,x,y,TW,TH,6); ctx.fill(); }
-      ctx.font=entity.type==='boss'?'26px Arial':'20px Arial';
-      ctx.textAlign='center';
-      const bob=Math.sin(frame*0.1+entity.col)*2;
-      ctx.fillText(entity.name.split(' ')[0],x+TW/2,y+TH*0.68+bob);
-      // 血条
-      ctx.fillStyle='rgba(0,0,0,0.25)'; roundRect(ctx,x+4,y+3,TW-8,6,3); ctx.fill();
-      ctx.fillStyle=entity.type==='boss'?'#ef4444':'#4ade80';
-      const hw=(TW-8)*(entity.hp/entity.maxHp);
-      roundRect(ctx,x+4,y+3,hw,6,3); ctx.fill();
-      if(entity.type==='boss'){
-        ctx.fillStyle='#fef08a'; ctx.font='bold 9px Arial'; ctx.textAlign='center';
-        ctx.fillText('BOSS',x+TW/2,y+TH-4);
+      if(isHead){
+        ctx.shadowColor=`hsl(${hue},${sat}%,${lit}%)`;
+        ctx.shadowBlur=10;
+      }
+      ctx.fillStyle=`hsl(${hue},${sat}%,${lit}%)`;
+      const r=isHead?8:6;
+      roundRect(ctx,x+2,y+2,TW-4,TH-4,r); ctx.fill();
+
+      // 高光
+      ctx.fillStyle='rgba(255,255,255,0.25)';
+      roundRect(ctx,x+4,y+4,TW-8,TH*0.32,r-2); ctx.fill();
+
+      // 蛇头：眼睛和表情
+      if(isHead){
+        // 根据方向定眼睛位置
+        const {dc,dr}=dir;
+        let ex1,ey1,ex2,ey2;
+        if(dc===1)      {ex1=x+TW*0.65;ey1=y+TH*0.28;ex2=x+TW*0.65;ey2=y+TH*0.72;}
+        else if(dc===-1){ex1=x+TW*0.35;ey1=y+TH*0.28;ex2=x+TW*0.35;ey2=y+TH*0.72;}
+        else if(dr===-1){ex1=x+TW*0.28;ey1=y+TH*0.35;ex2=x+TW*0.72;ey2=y+TH*0.35;}
+        else            {ex1=x+TW*0.28;ey1=y+TH*0.65;ex2=x+TW*0.72;ey2=y+TH*0.65;}
+        // 白眼
+        ctx.fillStyle='#fff'; ctx.shadowBlur=0;
+        ctx.beginPath(); ctx.arc(ex1,ey1,4,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(ex2,ey2,4,0,Math.PI*2); ctx.fill();
+        // 瞳孔
+        ctx.fillStyle='#1e1b4b';
+        ctx.beginPath(); ctx.arc(ex1+dc*1.2,ey1+dr*1.2,2.2,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(ex2+dc*1.2,ey2+dr*1.2,2.2,0,Math.PI*2); ctx.fill();
+        // 高光点
+        ctx.fillStyle='rgba(255,255,255,0.9)';
+        ctx.beginPath(); ctx.arc(ex1+dc*0.5-0.8,ey1+dr*0.5-0.8,1,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(ex2+dc*0.5-0.8,ey2+dr*0.5-0.8,1,0,Math.PI*2); ctx.fill();
+        // 舌头
+        const tx=x+TW/2+dc*TW*0.55, ty=y+TH/2+dr*TH*0.55;
+        ctx.strokeStyle='#f43f5e'; ctx.lineWidth=2;
+        ctx.beginPath(); ctx.moveTo(x+TW/2+dc*TW*0.4,y+TH/2+dr*TH*0.4);
+        ctx.lineTo(tx,ty); ctx.stroke();
+        ctx.beginPath(); ctx.arc(tx+dc*2-dr*2,ty+dr*2+dc*2,1.5,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(tx+dc*2+dr*2,ty+dr*2-dc*2,1.5,0,Math.PI*2);
+        ctx.fillStyle='#f43f5e'; ctx.fill();
       }
       ctx.restore();
-    } else if(entity.type==='chest'){
-      ctx.font='22px Arial'; ctx.textAlign='center';
-      ctx.fillText('📦',x+TW/2,y+TH*0.7);
-    } else if(entity.type==='key'){
-      const pulse=1+Math.sin(frame*0.15)*0.1;
-      ctx.save(); ctx.translate(x+TW/2,y+TH/2); ctx.scale(pulse,pulse);
-      ctx.font='20px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('🗝️',0,0);
-      ctx.restore();
     }
   }
 
-  function drawPlayer(ctx){
-    const x=MAP_OFFX+player.col*TW, y=MAP_OFFY+player.row*TH;
+  function drawFood(ctx) {
+    const x=offX+food.col*TW, y=offY+food.row*TH;
+    const pulse=1+Math.sin(food.pulse*0.15)*0.1;
     ctx.save();
-    ctx.shadowColor='#fde68a'; ctx.shadowBlur=12;
-    const bob=Math.sin(frame*0.12)*1.5;
-    ctx.font='26px Arial'; ctx.textAlign='center';
-    ctx.fillText('🧝',x+TW/2,y+TH*0.72+bob);
+    ctx.translate(x+TW/2,y+TH/2);
+    ctx.scale(pulse,pulse);
+    ctx.shadowColor=food.color; ctx.shadowBlur=14;
+    // 发光底圈
+    ctx.fillStyle=food.color+'44';
+    ctx.beginPath(); ctx.arc(0,0,TW*0.48,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=food.color+'88';
+    ctx.beginPath(); ctx.arc(0,0,TW*0.34,0,Math.PI*2); ctx.fill();
+    // emoji
+    ctx.font=`${TH*0.75}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.shadowBlur=8;
+    ctx.fillText(food.emoji,0,2);
     ctx.restore();
   }
 
-  function draw(ctx){
+  function drawParticles(ctx) {
+    for(const p of particles){
+      const alpha=p.life/p.maxLife;
+      ctx.fillStyle=p.color; ctx.globalAlpha=alpha;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.size*alpha,0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
+
+  function drawHUD(ctx) {
+    // 顶部栏
+    ctx.fillStyle='rgba(255,255,255,0.85)';
+    ctx.fillRect(0,0,W,offY);
+
+    ctx.fillStyle='#7c3aed'; ctx.font='bold 14px Arial'; ctx.textAlign='left';
+    ctx.fillText(`⭐ 分数: ${score}`, 12, offY-8);
+
+    ctx.fillStyle='#059669'; ctx.textAlign='center';
+    ctx.fillText(`🍎 ${foodEaten} / ${targetFood}  (吃满过关)`, W/2, offY-8);
+
+    ctx.fillStyle='#7c3aed'; ctx.textAlign='right';
+    ctx.fillText('第3关 — 彩虹贪吃蛇', W-12, offY-8);
+
+    // 进度条
+    const bw=W-24;
+    ctx.fillStyle='#e9d5ff'; roundRect(ctx,12,offY-6,bw,5,3); ctx.fill();
+    ctx.fillStyle='#a855f7'; roundRect(ctx,12,offY-6,bw*(foodEaten/targetFood),5,3); ctx.fill();
+
+    // 底部栏
+    ctx.fillStyle='rgba(255,255,255,0.85)';
+    ctx.fillRect(0,H-offY+2,W,offY);
+    ctx.fillStyle='#9ca3af'; ctx.font='11px Arial'; ctx.textAlign='center';
+    ctx.fillText('方向键 / WASD 控制方向  |  吃到食物变长得分  |  别撞墙也别撞自己！',W/2,H-offY+16);
+
+    // 下一个食物提示
+    const nextType = FOODS[Math.min(Math.floor((foodEaten+1)/3), FOODS.length-1)];
+    ctx.fillStyle='#6d28d9'; ctx.font='12px Arial'; ctx.textAlign='right';
+    ctx.fillText(`下一个: ${nextType.emoji} +${nextType.score}分`,W-12,H-offY+16);
+  }
+
+  function draw(ctx) {
     ctx.clearRect(0,0,W,H);
     // 背景
-    const bg=ctx.createLinearGradient(0,0,0,H);
-    bg.addColorStop(0,'#1e1b4b'); bg.addColorStop(1,'#312e81');
+    const bg=ctx.createLinearGradient(0,0,W,H);
+    bg.addColorStop(0,'#fdf4ff'); bg.addColorStop(0.5,'#f0fdf4'); bg.addColorStop(1,'#eff6ff');
     ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
-    // 星星背景
-    ctx.save(); ctx.globalAlpha=0.4;
-    for(let i=0;i<40;i++){
-      const sx=(i*137+50)%W, sy=(i*97+30)%H;
-      const sa=0.3+Math.sin(frame*0.04+i)*0.3;
-      ctx.fillStyle=`rgba(255,255,200,${sa})`;
-      ctx.beginPath(); ctx.arc(sx,sy,1.2,0,Math.PI*2); ctx.fill();
+
+    // 背景泡泡装饰
+    ctx.save(); ctx.globalAlpha=0.08;
+    for(let i=0;i<12;i++){
+      ctx.fillStyle=i%3===0?'#a855f7':i%3===1?'#10b981':'#3b82f6';
+      ctx.beginPath(); ctx.arc((i*173+60)%W,(i*113+40)%H,15+i%4*8,0,Math.PI*2); ctx.fill();
     }
     ctx.restore();
 
-    // 地图
-    for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-      const x=MAP_OFFX+c*TW, y=MAP_OFFY+r*TH;
-      drawTile(ctx,x,y,map[r][c],entities[`${r}_${c}`]);
-    }
-    drawPlayer(ctx);
-
-    // 左侧状态栏
-    const sx=8;
-    ctx.fillStyle='rgba(255,255,255,0.1)';
-    roundRect(ctx,sx,MAP_OFFY,130,240,10); ctx.fill();
-    ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1;
-    roundRect(ctx,sx,MAP_OFFY,130,240,10); ctx.stroke();
-
-    ctx.fillStyle='#fde68a'; ctx.font='bold 13px Arial'; ctx.textAlign='left';
-    ctx.fillText('🧝 勇者',sx+8,MAP_OFFY+20);
-    ctx.fillStyle='#fca5a5'; ctx.font='12px Arial';
-    ctx.fillText(`❤️ ${player.hp}/${player.maxHp}`,sx+8,MAP_OFFY+40);
-    ctx.fillStyle='rgba(50,0,0,0.4)'; roundRect(ctx,sx+8,MAP_OFFY+44,112,7,4); ctx.fill();
-    ctx.fillStyle='#ef4444'; roundRect(ctx,sx+8,MAP_OFFY+44,112*(player.hp/player.maxHp),7,4); ctx.fill();
-    ctx.fillStyle='#fbbf24'; ctx.fillText(`⚔️ ATK: ${player.atk}`,sx+8,MAP_OFFY+68);
-    ctx.fillStyle='#86efac'; ctx.fillText(`🛡️ DEF: ${player.def}`,sx+8,MAP_OFFY+86);
-    ctx.fillStyle='#fde68a'; ctx.fillText(`🗝️ 钥匙: ${player.keys}`,sx+8,MAP_OFFY+104);
-    ctx.fillStyle='#c4b5fd'; ctx.fillText(`⭐ 分数: ${score}`,sx+8,MAP_OFFY+122);
-    ctx.fillStyle='#e0e7ff'; ctx.fillText(`📍 第${floor+1}层`,sx+8,MAP_OFFY+140);
-
-    // 当前层敌人信息
-    ctx.fillStyle='#a5b4fc'; ctx.font='bold 11px Arial';
-    ctx.fillText('── 本层敌人 ──',sx+8,MAP_OFFY+162);
-    ENEMY_STATS[floor].forEach((e,i)=>{
-      ctx.fillStyle=e.color; ctx.font='11px Arial';
-      ctx.fillText(e.name,sx+8,MAP_OFFY+178+i*32);
-      ctx.fillStyle='#fca5a5'; ctx.fillText(`HP:${e.hp} ATK:${e.atk}`,sx+8,MAP_OFFY+191+i*32);
-    });
-
-    // 消息框
-    if(msgTimer>0){
-      const alpha=Math.min(1,msgTimer/15);
-      ctx.fillStyle=`rgba(0,0,0,${alpha*0.8})`;
-      roundRect(ctx,W/2-200,H/2-30,400,60,12); ctx.fill();
-      ctx.strokeStyle=`rgba(253,230,138,${alpha})`; ctx.lineWidth=2;
-      roundRect(ctx,W/2-200,H/2-30,400,60,12); ctx.stroke();
-      ctx.fillStyle=`rgba(255,255,255,${alpha})`;
-      ctx.font='bold 15px Arial'; ctx.textAlign='center';
-      ctx.fillText(message,W/2,H/2+6);
-    }
-
-    // HUD顶部
-    ctx.fillStyle='rgba(30,27,75,0.85)'; ctx.fillRect(0,0,W,MAP_OFFY);
-    ctx.fillStyle='#fde68a'; ctx.font='bold 14px Arial'; ctx.textAlign='center';
-    ctx.fillText('第3关 — 魔塔圣殿',W/2,MAP_OFFY-10);
-    ctx.fillStyle='#a5b4fc'; ctx.textAlign='right';
-    ctx.fillText('踩敌战斗 | 宝箱强化 | 找钥开门 | 踩楼梯上层',W-8,MAP_OFFY-10);
+    drawGrid(ctx);
+    drawFood(ctx);
+    drawParticles(ctx);
+    drawSnake(ctx);
+    drawHUD(ctx);
   }
 
-  return {init,update,draw,onKeyDown,onKeyUp};
+  return {init, update, draw, onKeyDown, onKeyUp};
 })();
