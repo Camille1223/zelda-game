@@ -8,56 +8,30 @@ html, body {
   width: 100%; height: 100%;
   overflow: hidden;
   background: #0a0a1a;
+  touch-action: none;
+  font-family: 'Arial', sans-serif;
+}
+
+/* ── 游戏容器：铺满整个屏幕 ── */
+#game-container {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-family: 'Arial', sans-serif;
-  touch-action: none;
+  background: #0a0a1a;
 }
 
-/* ── 游戏容器：自动缩放适配任意屏幕 ── */
-#game-container {
-  position: relative;
-  /* 实际宽高由 JS 动态设置 */
-  border: 2px solid #4a9f3f;
-  box-shadow: 0 0 20px #4a9f3f66;
-  flex-shrink: 0;
-}
-
+/* canvas 由 JS 动态缩放，保持 400×700 比例铺满 */
 #gameCanvas {
   display: block;
-  background: #000;
-  /* canvas 固定 800×500 逻辑尺寸，容器 transform 缩放 */
+  /* transform-origin 由 JS 设置 */
 }
 
-/* ── 横屏提示 ── */
-#rotate-tip {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.92);
-  z-index: 999;
-  justify-content: center;
-  align-items: center;
-}
-#rotate-tip.show { display: flex; }
-
-.rotate-content {
-  text-align: center;
-  color: #fff;
-}
-.rotate-icon { font-size: 48px; margin-bottom: 14px; }
-.rotate-content p { font-size: 18px; color: #aaa; margin-bottom: 16px; }
-#btnIgnoreRotate {
-  background: #1a5c1a; color: #4adf3f;
-  border: 2px solid #4adf3f;
-  padding: 8px 24px; font-size: 15px;
-  cursor: pointer; border-radius: 6px;
-}
-
-/* ── Overlay（通关/排行榜弹窗）── */
+/* ── Overlay ── */
 #overlay {
-  position: absolute;
+  position: fixed;
   top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(0,0,0,0.88);
   display: flex;
@@ -65,6 +39,7 @@ html, body {
   align-items: center;
   z-index: 10;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 #overlay.hidden { display: none; }
 
@@ -72,49 +47,49 @@ html, body {
   text-align: center;
   color: #fff;
   width: 90%;
-  max-width: 480px;
-  padding: 16px;
+  max-width: 360px;
+  padding: 20px 16px;
 }
 #overlay-content h1 {
-  font-size: 26px; color: #ffd700;
+  font-size: 24px; color: #ffd700;
   text-shadow: 0 0 10px #ffd700;
   margin-bottom: 8px;
 }
-#overlay-content h2 { font-size: 18px; color: #4adf3f; margin-bottom: 12px; }
+#overlay-content h2 { font-size: 17px; color: #4adf3f; margin-bottom: 10px; }
 #overlay-content p  { color: #ccc; font-size: 13px; margin-bottom: 6px; line-height: 1.5; }
 
 #overlay-content .btn {
   background: #1a5c1a; color: #4adf3f;
   border: 2px solid #4adf3f;
-  padding: 10px 22px; margin: 6px;
+  padding: 11px 22px; margin: 6px;
   font-size: 15px; cursor: pointer;
-  border-radius: 6px; transition: all 0.2s;
+  border-radius: 8px;
   display: inline-block;
+  -webkit-appearance: none;
 }
-#overlay-content .btn:active {
-  background: #4adf3f; color: #000;
-}
+#overlay-content .btn:active { background: #4adf3f; color: #000; }
 
 #overlay-content input[type="text"] {
   background: #111; border: 2px solid #4adf3f;
-  color: #fff; padding: 8px 12px;
-  font-size: 15px; width: 220px; margin: 6px;
-  border-radius: 6px; outline: none;
+  color: #fff; padding: 10px 12px;
+  font-size: 15px; width: 210px; margin: 8px;
+  border-radius: 8px; outline: none;
+  -webkit-appearance: none;
 }
 
 #overlay-content .score-big {
-  font-size: 44px; color: #ffd700;
+  font-size: 46px; color: #ffd700;
   text-shadow: 0 0 15px #ffd700;
-  margin: 8px 0;
+  margin: 10px 0;
 }
 
 #overlay-content .leaderboard {
   width: 100%; margin-top: 10px;
-  border-collapse: collapse; font-size: 13px;
+  border-collapse: collapse; font-size: 12px;
 }
 #overlay-content .leaderboard th,
 #overlay-content .leaderboard td {
-  border: 1px solid #333; padding: 5px 10px; text-align: left;
+  border: 1px solid #333; padding: 5px 8px; text-align: left;
 }
 #overlay-content .leaderboard th { background: #1a1a2e; color: #ffd700; }
 #overlay-content .leaderboard tr:nth-child(even) { background: #111; }
@@ -123,38 +98,42 @@ html, body {
 .rank-2 { color: #c0c0c0 !important; }
 .rank-3 { color: #cd7f32 !important; }
 
-/* ── 触屏方向按钮（第一关）── */
+/* ── 第一关触屏按钮 ── */
 #touch-controls {
-  position: absolute;
-  bottom: 6px; left: 0; right: 0;
+  position: fixed;
+  bottom: max(20px, env(safe-area-inset-bottom, 20px));
+  left: 0; right: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 14px;
+  padding: 0 28px;
   pointer-events: none;
+  z-index: 5;
 }
-#touch-controls.hidden { display: none; }
+#touch-controls.hidden  { display: none; }
 #touch-controls.visible { display: flex; }
 
 .touch-btn {
-  width: 58px; height: 58px;
+  width: 68px; height: 68px;
   border-radius: 50%;
   background: rgba(255,255,255,0.18);
-  border: 2px solid rgba(255,255,255,0.4);
+  border: 2px solid rgba(255,255,255,0.45);
   color: #fff; font-size: 22px;
   display: flex; justify-content: center; align-items: center;
   cursor: pointer; pointer-events: all;
-  user-select: none;
-  backdrop-filter: blur(4px);
-  transition: background 0.1s;
-  -webkit-user-select: none;
+  user-select: none; -webkit-user-select: none;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-weight: bold;
 }
 .touch-btn:active, .touch-btn.pressed {
-  background: rgba(255,255,255,0.42);
+  background: rgba(255,255,255,0.40);
+  transform: scale(0.93);
 }
 .jump-btn {
-  width: 68px; height: 68px;
-  background: rgba(74,222,63,0.25);
+  width: 76px; height: 76px;
+  background: rgba(74,222,63,0.22);
   border-color: #4adf3f;
-  color: #4adf3f; font-size: 26px;
+  color: #4adf3f; font-size: 18px;
+  border-radius: 50%;
 }

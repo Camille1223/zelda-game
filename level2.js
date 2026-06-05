@@ -1,29 +1,31 @@
 // ============================================================
-// level2.js — 关卡2: 糖果迷宫 卡通2D版
+// level2.js — 关卡2: 糖果迷宫（竖屏400×700）
 // ============================================================
 
 const Level2 = (() => {
-  const W = 800, H = 500;
-  const COLS = 15, ROWS = 13;
-  const TW = 44, TH = 36;
-  const offX = Math.floor((W - COLS*TW) / 2);
-  const offY = Math.floor((H - ROWS*TH) / 2) + 4;
+  const W = 400, H = 700;
+  const COLS = 11, ROWS = 15;
+  const TW = 32, TH = 32;
+  const offX = Math.floor((W - COLS*TW) / 2);  // 24
+  const offY = 44;  // top HUD height
 
   // 0=通道 1=墙 2=小星 3=大糖果
   const MAP_TEMPLATE = [
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,2,2,2,2,2,1,2,1,2,2,2,2,2,1],
-    [1,3,1,1,2,2,1,2,1,2,2,1,1,3,1],
-    [1,2,1,2,2,2,2,2,2,2,2,2,1,2,1],
-    [1,2,2,2,1,1,2,2,2,1,1,2,2,2,1],
-    [1,2,1,2,2,2,2,2,2,2,2,2,1,2,1],
-    [1,2,1,2,1,2,2,2,2,2,1,2,1,2,1],
-    [1,2,1,2,2,2,2,2,2,2,2,2,1,2,1],
-    [1,2,2,2,1,1,2,2,2,1,1,2,2,2,1],
-    [1,2,1,2,2,2,2,2,2,2,2,2,1,2,1],
-    [1,3,1,1,2,2,1,2,1,2,2,1,1,3,1],
-    [1,2,2,2,2,2,1,2,1,2,2,2,2,2,1],
-    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1,1],
+    [1,2,2,2,1,2,1,2,2,2,1],
+    [1,3,1,2,2,2,2,2,1,3,1],
+    [1,2,1,1,1,2,1,1,1,2,1],
+    [1,2,2,2,2,2,2,2,2,2,1],
+    [1,2,1,2,1,2,1,2,1,2,1],
+    [1,2,2,2,2,2,2,2,2,2,1],
+    [1,2,1,2,1,2,1,2,1,2,1],
+    [1,2,2,2,2,2,2,2,2,2,1],
+    [1,2,1,1,1,2,1,1,1,2,1],
+    [1,3,1,2,2,2,2,2,1,3,1],
+    [1,2,2,2,1,2,1,2,2,2,1],
+    [1,2,1,2,2,2,2,2,1,2,1],
+    [1,2,2,2,2,2,2,2,2,2,1],
+    [1,1,1,1,1,1,1,1,1,1,1],
   ];
 
   let map, player, ghosts, score, frame, powerTimer, moveTimer;
@@ -31,8 +33,8 @@ const Level2 = (() => {
 
   const GHOST_DEFS = [
     {col:1,  row:1,  dx:1,  dy:0, color:'#fb7185', eyeColor:'#be123c'},
-    {col:13, row:1,  dx:-1, dy:0, color:'#fb923c', eyeColor:'#c2410c'},
-    {col:7,  row:11, dx:0,  dy:-1,color:'#a78bfa', eyeColor:'#6d28d9'},
+    {col:9,  row:1,  dx:-1, dy:0, color:'#fb923c', eyeColor:'#c2410c'},
+    {col:5,  row:7,  dx:0,  dy:-1,color:'#a78bfa', eyeColor:'#6d28d9'},
   ];
 
   const DIRS = {
@@ -48,7 +50,7 @@ const Level2 = (() => {
     totalDots=0; collectedDots=0;
     for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++)
       if(map[r][c]===2||map[r][c]===3) totalDots++;
-    player={col:7,row:6,dx:0,dy:0,nextDx:0,nextDy:0};
+    player={col:5,row:7,dx:0,dy:0,nextDx:0,nextDy:0};
     ghosts=GHOST_DEFS.map(g=>({...g,scared:false}));
     return {type:'level2',done:false};
   }
@@ -95,9 +97,10 @@ const Level2 = (() => {
       if(frame%8===0){
         for(const g of ghosts){ const d=ghostAI(g); g.dx=d.dx; g.dy=d.dy; g.col+=d.dx; g.row+=d.dy; }
       }
-      for(const g of ghosts){
+      for(let i=0;i<ghosts.length;i++){
+        const g=ghosts[i];
         if(g.col===player.col&&g.row===player.row){
-          if(g.scared){ g.col=GHOST_DEFS[g.id||ghosts.indexOf(g)].col; g.row=GHOST_DEFS[g.id||ghosts.indexOf(g)].row; g.scared=false; score+=150; Assets.playBeep(500,0.1); }
+          if(g.scared){ g.col=GHOST_DEFS[i].col; g.row=GHOST_DEFS[i].row; g.scared=false; score+=150; Assets.playBeep(500,0.1); }
           else{ Assets.playBeep(180,0.4,'sawtooth'); return{type:'level2',done:true,score,failed:true}; }
         }
       }
@@ -117,13 +120,10 @@ const Level2 = (() => {
   }
 
   function drawWall(ctx,x,y){
-    // 粉紫圆角砖
     const g=ctx.createLinearGradient(x,y,x,y+TH);
     g.addColorStop(0,'#c084fc'); g.addColorStop(1,'#9333ea');
     ctx.fillStyle=g; roundRect(ctx,x+1,y+1,TW-2,TH-2,8); ctx.fill();
-    // 高光
     ctx.fillStyle='rgba(255,255,255,0.3)'; roundRect(ctx,x+4,y+4,TW-8,TH*0.38,5); ctx.fill();
-    // 小爱心装饰
     if((Math.floor(x/TW)+Math.floor(y/TH))%3===0){
       ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.font='10px Arial'; ctx.textAlign='center';
       ctx.fillText('♥',x+TW/2,y+TH/2+4);
@@ -163,7 +163,6 @@ const Level2 = (() => {
     const bodyColor=flicker?'#e2e8f0':scared?'#93c5fd':g.color;
 
     ctx.shadowColor=bodyColor; ctx.shadowBlur=12;
-    // 身体
     ctx.fillStyle=bodyColor;
     ctx.beginPath();
     ctx.arc(cx,cy-2+bob,r,Math.PI,0);
@@ -177,20 +176,16 @@ const Level2 = (() => {
     ctx.closePath(); ctx.fill();
 
     if(!scared){
-      // 白眼
       ctx.fillStyle='#fff';
       ctx.beginPath(); ctx.ellipse(cx-r*0.3,cy-r*0.1+bob,r*0.22,r*0.3,0,0,Math.PI*2); ctx.fill();
       ctx.beginPath(); ctx.ellipse(cx+r*0.3,cy-r*0.1+bob,r*0.22,r*0.3,0,0,Math.PI*2); ctx.fill();
-      // 瞳孔
       ctx.fillStyle=g.eyeColor||'#1e1b4b';
       ctx.beginPath(); ctx.arc(cx-r*0.26,cy-r*0.05+bob,r*0.13,0,Math.PI*2); ctx.fill();
       ctx.beginPath(); ctx.arc(cx+r*0.34,cy-r*0.05+bob,r*0.13,0,Math.PI*2); ctx.fill();
-      // 高光
       ctx.fillStyle='rgba(255,255,255,0.8)';
       ctx.beginPath(); ctx.arc(cx-r*0.2,cy-r*0.18+bob,r*0.07,0,Math.PI*2); ctx.fill();
       ctx.beginPath(); ctx.arc(cx+r*0.4,cy-r*0.18+bob,r*0.07,0,Math.PI*2); ctx.fill();
     } else {
-      // X眼
       ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=2;
       [[cx-r*0.43,cy-r*0.28+bob,cx-r*0.17,cy+bob],
        [cx-r*0.17,cy-r*0.28+bob,cx-r*0.43,cy+bob],
@@ -198,7 +193,6 @@ const Level2 = (() => {
        [cx+r*0.43,cy-r*0.28+bob,cx+r*0.17,cy+bob]].forEach(([x1,y1,x2,y2])=>{
         ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
       });
-      // 小嘴（波浪）
       ctx.strokeStyle='rgba(255,255,255,0.7)'; ctx.lineWidth=1.5;
       ctx.beginPath();
       for(let i=0;i<=10;i++){
@@ -217,9 +211,7 @@ const Level2 = (() => {
     const r=TW*0.38;
     const mouthOpen=0.2+Math.abs(Math.sin(frame*0.22))*0.38;
     ctx.save();
-    // 光晕
     ctx.shadowColor='#fde68a'; ctx.shadowBlur=14;
-    // 根据方向旋转
     let rot=0;
     if(player.dx<0) rot=Math.PI;
     else if(player.dy<0) rot=-Math.PI/2;
@@ -234,19 +226,15 @@ const Level2 = (() => {
     ctx.arc(0,0,r,mouthOpen,Math.PI*2-mouthOpen);
     ctx.closePath(); ctx.fill();
 
-    // 高光
     ctx.fillStyle='rgba(255,255,255,0.5)';
     ctx.beginPath(); ctx.arc(-r*0.25,-r*0.3,r*0.22,0,Math.PI*2); ctx.fill();
-
     ctx.restore();
 
-    // 眼睛（不随嘴旋转）
     ctx.fillStyle='#1c1917';
-    let ex=cx, ey=cy-r*0.15;
-    if(rot===0)      { ex=cx;       ey=cy-r*0.45; }
-    else if(rot===Math.PI) { ex=cx; ey=cy+r*0.45; }
-    else if(rot===-Math.PI/2) { ex=cx+r*0.45; ey=cy; }
-    else { ex=cx-r*0.45; ey=cy; }
+    let ex=cx, ey=cy-r*0.45;
+    if(rot===Math.PI) ey=cy+r*0.45;
+    else if(rot===-Math.PI/2){ ex=cx+r*0.45; ey=cy; }
+    else if(rot===Math.PI/2){ ex=cx-r*0.45; ey=cy; }
     ctx.beginPath(); ctx.arc(ex,ey,r*0.13,0,Math.PI*2); ctx.fill();
     ctx.fillStyle='rgba(255,255,255,0.8)';
     ctx.beginPath(); ctx.arc(ex-r*0.04,ey-r*0.04,r*0.06,0,Math.PI*2); ctx.fill();
@@ -254,19 +242,18 @@ const Level2 = (() => {
 
   function draw(ctx){
     ctx.clearRect(0,0,W,H);
-    // 渐变背景
     const bg=ctx.createLinearGradient(0,0,W,H);
     bg.addColorStop(0,'#fdf4ff'); bg.addColorStop(0.5,'#fce7f3'); bg.addColorStop(1,'#ede9fe');
     ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
-    // 背景泡泡
+
     ctx.save(); ctx.globalAlpha=0.1;
     for(let i=0;i<18;i++){
       ctx.fillStyle=i%3===0?'#f0abfc':i%3===1?'#c4b5fd':'#fbcfe8';
-      ctx.beginPath(); ctx.arc((i*137+30)%W,(i*97+20)%H,10+i%4*5,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc((i*137+30)%W,(i*97+60)%H,10+i%4*5,0,Math.PI*2); ctx.fill();
     }
     ctx.restore();
 
-    // 地图格子
+    // 地图
     for(let r=0;r<ROWS;r++){
       for(let c=0;c<COLS;c++){
         const x=offX+c*TW, y=offY+r*TH;
@@ -281,37 +268,31 @@ const Level2 = (() => {
       }
     }
 
-    // 幽灵
     ghosts.forEach((g,i)=>drawGhostCartoon(ctx,g,i));
-    // 玩家
     drawPlayerCartoon(ctx);
 
     // HUD 顶部
     ctx.fillStyle='rgba(255,255,255,0.88)';
     ctx.fillRect(0,0,W,offY);
-    ctx.fillStyle='#7c3aed'; ctx.font='bold 14px Arial'; ctx.textAlign='left';
-    ctx.fillText(`⭐ 分数: ${score}`, 12, offY-8);
+    ctx.fillStyle='#7c3aed'; ctx.font='bold 13px Arial'; ctx.textAlign='left';
+    ctx.fillText(`⭐ ${score}`, 10, 28);
     const target=Math.ceil(totalDots*0.6);
     ctx.fillStyle='#db2777'; ctx.textAlign='center';
-    ctx.fillText(`🍬 ${collectedDots} / ${target}  (集满过关)`, W/2, offY-8);
+    ctx.fillText(`🍬 ${collectedDots}/${target}`, W/2, 28);
     ctx.fillStyle='#7c3aed'; ctx.textAlign='right';
-    ctx.fillText('第2关 — 糖果迷宫', W-12, offY-8);
+    ctx.fillText('第2关', W-10, 28);
     // 进度条
     const bw=W-24;
-    ctx.fillStyle='#e9d5ff'; roundRect(ctx,12,offY-6,bw,5,3); ctx.fill();
-    ctx.fillStyle='#a855f7'; roundRect(ctx,12,offY-6,bw*Math.min(collectedDots/target,1),5,3); ctx.fill();
+    ctx.fillStyle='#e9d5ff'; roundRect(ctx,12,36,bw,5,3); ctx.fill();
+    ctx.fillStyle='#a855f7'; roundRect(ctx,12,36,bw*Math.min(collectedDots/target,1),5,3); ctx.fill();
 
     // 强力模式
     if(powerTimer>0){
       ctx.fillStyle=`rgba(168,85,247,${0.06+Math.sin(frame*0.1)*0.04})`;
       ctx.fillRect(0,0,W,H);
       ctx.fillStyle='#7c3aed'; ctx.font='bold 13px Arial'; ctx.textAlign='center';
-      ctx.fillText(`💫 强力模式 ${Math.ceil(powerTimer/60)}s — 快去吃幽灵！`,W/2,H-offY+14);
+      ctx.fillText(`💫 强力模式 ${Math.ceil(powerTimer/60)}s`,W/2,H-12);
     }
-    // 底部提示
-    ctx.fillStyle='rgba(255,255,255,0.88)'; ctx.fillRect(0,H-offY,W,offY);
-    ctx.fillStyle='#9ca3af'; ctx.font='11px Arial'; ctx.textAlign='center';
-    ctx.fillText('方向键 / WASD 移动  |  吃大糖果可反击幽灵  |  集满60%过关',W/2,H-offY+14);
   }
 
   return {init,update,draw,onKeyDown,onKeyUp};
