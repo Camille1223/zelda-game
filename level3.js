@@ -79,7 +79,7 @@ const Level3 = (() => {
     });
 
     moveTimer++;
-    const speed = Math.max(6, 9 - Math.floor(snake.length/5));
+    const speed = Math.max(10, 15 - Math.floor(snake.length/4));
     if(moveTimer < speed) return null;
     moveTimer = 0;
 
