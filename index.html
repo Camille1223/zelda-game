@@ -2,15 +2,37 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>塞尔达传说 — 勇者三试炼</title>
+  <!-- 微信/手机横屏适配 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="format-detection" content="telephone=no">
+  <!-- 微信分享信息 -->
+  <meta property="og:title" content="勇者三试炼 🎮">
+  <meta property="og:description" content="三关闯关小游戏：彩虹跳跃、糖果迷宫、贪吃蛇，通关解锁迪士尼公主庆典！">
+  <title>勇者三试炼 🎮</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- 竖屏提示蒙层 -->
+  <div id="rotate-tip">
+    <div class="rotate-content">
+      <div class="rotate-icon">📱➡️🔄</div>
+      <p>请横屏游玩效果更佳</p>
+      <button id="btnIgnoreRotate">竖屏继续</button>
+    </div>
+  </div>
+
   <div id="game-container">
     <canvas id="gameCanvas" width="800" height="500"></canvas>
     <div id="overlay" class="hidden">
       <div id="overlay-content"></div>
+    </div>
+    <!-- 第一关触屏按钮 -->
+    <div id="touch-controls" class="hidden">
+      <div id="btn-left"  class="touch-btn">◀</div>
+      <div id="btn-jump"  class="touch-btn jump-btn">▲</div>
+      <div id="btn-right" class="touch-btn">▶</div>
     </div>
   </div>
 

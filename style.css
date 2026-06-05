@@ -1,138 +1,160 @@
 * {
-  margin: 0;
-  padding: 0;
+  margin: 0; padding: 0;
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
-body {
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
   background: #0a0a1a;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  font-family: 'Courier New', monospace;
+  font-family: 'Arial', sans-serif;
+  touch-action: none;
 }
 
+/* ── 游戏容器：自动缩放适配任意屏幕 ── */
 #game-container {
   position: relative;
-  border: 3px solid #4a9f3f;
-  box-shadow: 0 0 30px #4a9f3f88, 0 0 60px #2d6b2488;
+  /* 实际宽高由 JS 动态设置 */
+  border: 2px solid #4a9f3f;
+  box-shadow: 0 0 20px #4a9f3f66;
+  flex-shrink: 0;
 }
 
 #gameCanvas {
   display: block;
   background: #000;
+  /* canvas 固定 800×500 逻辑尺寸，容器 transform 缩放 */
 }
 
+/* ── 横屏提示 ── */
+#rotate-tip {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 999;
+  justify-content: center;
+  align-items: center;
+}
+#rotate-tip.show { display: flex; }
+
+.rotate-content {
+  text-align: center;
+  color: #fff;
+}
+.rotate-icon { font-size: 48px; margin-bottom: 14px; }
+.rotate-content p { font-size: 18px; color: #aaa; margin-bottom: 16px; }
+#btnIgnoreRotate {
+  background: #1a5c1a; color: #4adf3f;
+  border: 2px solid #4adf3f;
+  padding: 8px 24px; font-size: 15px;
+  cursor: pointer; border-radius: 6px;
+}
+
+/* ── Overlay（通关/排行榜弹窗）── */
 #overlay {
   position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.85);
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.88);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
+  overflow-y: auto;
 }
-
-#overlay.hidden {
-  display: none;
-}
+#overlay.hidden { display: none; }
 
 #overlay-content {
   text-align: center;
   color: #fff;
-  max-width: 500px;
-  padding: 20px;
+  width: 90%;
+  max-width: 480px;
+  padding: 16px;
 }
-
 #overlay-content h1 {
-  font-size: 32px;
-  color: #ffd700;
+  font-size: 26px; color: #ffd700;
   text-shadow: 0 0 10px #ffd700;
-  margin-bottom: 10px;
-  letter-spacing: 2px;
-}
-
-#overlay-content h2 {
-  font-size: 22px;
-  color: #4adf3f;
-  margin-bottom: 16px;
-}
-
-#overlay-content p {
-  color: #ccc;
   margin-bottom: 8px;
-  font-size: 14px;
-  line-height: 1.6;
 }
+#overlay-content h2 { font-size: 18px; color: #4adf3f; margin-bottom: 12px; }
+#overlay-content p  { color: #ccc; font-size: 13px; margin-bottom: 6px; line-height: 1.5; }
 
 #overlay-content .btn {
-  background: #1a5c1a;
-  color: #4adf3f;
+  background: #1a5c1a; color: #4adf3f;
   border: 2px solid #4adf3f;
-  padding: 10px 28px;
-  margin: 8px;
-  font-size: 16px;
-  font-family: 'Courier New', monospace;
-  cursor: pointer;
-  letter-spacing: 1px;
-  transition: all 0.2s;
+  padding: 10px 22px; margin: 6px;
+  font-size: 15px; cursor: pointer;
+  border-radius: 6px; transition: all 0.2s;
+  display: inline-block;
 }
-
-#overlay-content .btn:hover {
-  background: #4adf3f;
-  color: #000;
-  box-shadow: 0 0 12px #4adf3f;
+#overlay-content .btn:active {
+  background: #4adf3f; color: #000;
 }
 
 #overlay-content input[type="text"] {
-  background: #111;
-  border: 2px solid #4adf3f;
-  color: #fff;
-  padding: 8px 14px;
-  font-size: 16px;
-  font-family: 'Courier New', monospace;
-  width: 240px;
-  margin: 8px;
-  outline: none;
+  background: #111; border: 2px solid #4adf3f;
+  color: #fff; padding: 8px 12px;
+  font-size: 15px; width: 220px; margin: 6px;
+  border-radius: 6px; outline: none;
 }
 
 #overlay-content .score-big {
-  font-size: 48px;
-  color: #ffd700;
+  font-size: 44px; color: #ffd700;
   text-shadow: 0 0 15px #ffd700;
-  margin: 10px 0;
+  margin: 8px 0;
 }
 
 #overlay-content .leaderboard {
-  width: 100%;
-  margin-top: 12px;
-  border-collapse: collapse;
+  width: 100%; margin-top: 10px;
+  border-collapse: collapse; font-size: 13px;
 }
-
 #overlay-content .leaderboard th,
 #overlay-content .leaderboard td {
-  border: 1px solid #333;
-  padding: 6px 12px;
-  text-align: left;
-  font-size: 13px;
+  border: 1px solid #333; padding: 5px 10px; text-align: left;
 }
-
-#overlay-content .leaderboard th {
-  background: #1a1a2e;
-  color: #ffd700;
-}
-
-#overlay-content .leaderboard tr:nth-child(even) {
-  background: #111;
-}
-
-#overlay-content .leaderboard td:last-child {
-  color: #4adf3f;
-  text-align: right;
-}
-
+#overlay-content .leaderboard th { background: #1a1a2e; color: #ffd700; }
+#overlay-content .leaderboard tr:nth-child(even) { background: #111; }
+#overlay-content .leaderboard td:last-child { color: #4adf3f; text-align: right; }
 .rank-1 { color: #ffd700 !important; }
 .rank-2 { color: #c0c0c0 !important; }
 .rank-3 { color: #cd7f32 !important; }
+
+/* ── 触屏方向按钮（第一关）── */
+#touch-controls {
+  position: absolute;
+  bottom: 6px; left: 0; right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 14px;
+  pointer-events: none;
+}
+#touch-controls.hidden { display: none; }
+#touch-controls.visible { display: flex; }
+
+.touch-btn {
+  width: 58px; height: 58px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  border: 2px solid rgba(255,255,255,0.4);
+  color: #fff; font-size: 22px;
+  display: flex; justify-content: center; align-items: center;
+  cursor: pointer; pointer-events: all;
+  user-select: none;
+  backdrop-filter: blur(4px);
+  transition: background 0.1s;
+  -webkit-user-select: none;
+}
+.touch-btn:active, .touch-btn.pressed {
+  background: rgba(255,255,255,0.42);
+}
+.jump-btn {
+  width: 68px; height: 68px;
+  background: rgba(74,222,63,0.25);
+  border-color: #4adf3f;
+  color: #4adf3f; font-size: 26px;
+}
